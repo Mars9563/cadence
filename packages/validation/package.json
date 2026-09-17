@@ -1,5 +1,5 @@
 {
-  "name": "validation",
+  "name": "@cadence/validation",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
