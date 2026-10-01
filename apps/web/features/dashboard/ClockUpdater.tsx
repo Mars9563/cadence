@@ -1,22 +1,37 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useSetCurrentDateTime } from '@/store/selectors';
+import {
+  useSetCadenceDayEnd,
+  useSetCurrentDateTime,
+  useUser,
+} from '@/store/selectors';
+import { getCadenceDayEnd } from '@/lib/cadenceDay';
 
 export function ClockUpdater() {
+  const user = useUser();
+
   const setCurrentTime = useSetCurrentDateTime();
+  const setCadenceDayEnd = useSetCadenceDayEnd();
 
   useEffect(() => {
-    // Set immediately
-    setCurrentTime(new Date());
+    if (!user?.dayEndTime) {
+      return;
+    }
 
-    // Then update every second
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const updateClock = () => {
+      const now = new Date();
+
+      setCurrentTime(now);
+      setCadenceDayEnd(getCadenceDayEnd(now, user.dayEndTime));
+    };
+
+    updateClock();
+
+    const interval = setInterval(updateClock, 1000);
 
     return () => clearInterval(interval);
-  }, [setCurrentTime]);
+  }, [user?.dayEndTime, setCurrentTime, setCadenceDayEnd]);
 
   return null;
 }

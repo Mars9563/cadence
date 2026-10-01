@@ -14,6 +14,10 @@ export const useCurrentDateTime = () =>
 export const useSetCurrentDateTime = () =>
   useCadenceStore((s) => s.setCurrentDateTime);
 
+export const useCadenceDayEnd = () => useCadenceStore((s) => s.cadenceDayEnd);
+export const useSetCadenceDayEnd = () =>
+  useCadenceStore((s) => s.setCadenceDayEnd);
+
 // auth selectors ----
 export const useUser = () => useCadenceStore((s) => s.user);
 export const useIsAuthenticated = () =>

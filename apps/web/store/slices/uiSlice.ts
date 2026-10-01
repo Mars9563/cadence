@@ -6,16 +6,19 @@ export interface uiState {
   ViewMode: ViewMode;
   signOutModalOpen: boolean;
   currentDateTime: Date;
+  cadenceDayEnd: Date | null;
 
   setViewMode: (value: ViewMode) => void;
   setSignOutModalOpen: (command: boolean) => void;
   setCurrentDateTime: (date: Date) => void;
+  setCadenceDayEnd: (date: Date | null) => void;
 }
 
 export const CreateUiSlice: StateCreator<uiState> = (set) => ({
   ViewMode: 'Dashboard',
   signOutModalOpen: false,
   currentDateTime: new Date(),
+  cadenceDayEnd: null,
 
   setViewMode: (value) =>
     set({
@@ -28,5 +31,9 @@ export const CreateUiSlice: StateCreator<uiState> = (set) => ({
   setCurrentDateTime: (date) =>
     set({
       currentDateTime: date,
+    }),
+  setCadenceDayEnd: (date) =>
+    set({
+      cadenceDayEnd: date,
     }),
 });
