@@ -1,6 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { config } from 'dotenv';
+import profileRoutes from './routes/profile.route'
 
 export const app = express();
 
@@ -20,3 +22,5 @@ app.get('/health', (_req, res) => {
     service: 'cadence-server',
   });
 });
+
+app.use(profileRoutes)

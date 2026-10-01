@@ -1,10 +1,10 @@
-import { SignOutButton } from '@/features/auth/SignOutButton';
+import { AppBootstrap } from '@/features/AppBootstrap';
+import { View } from '@/features/View';
 
 export default function Home() {
   return (
-    <div className="">
-      <h1>Dashboard</h1>
-      <SignOutButton />
-    </div>
+    <AppBootstrap>
+      <View />
+    </AppBootstrap>
   );
 }

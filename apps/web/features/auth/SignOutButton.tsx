@@ -1,38 +1,21 @@
-'use client'
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+'use client';
 
-import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
+import { MdLogout } from 'react-icons/md';
+
+import { useSetSignOutModalOpen } from '@/store/selectors';
 
 export function SignOutButton() {
-  const router = useRouter();
-  const supabase = createClient();
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function handleLogout() {
-    setIsLoading(true);
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error('Logout failed:', error);
-      setIsLoading(false);
-      return;
-    }
-
-    router.push('/auth/sign-in');
-    router.refresh();
-  }
+  const setSignOutModalOpen = useSetSignOutModalOpen();
 
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      onClick={handleLogout}
-      disabled={isLoading}
+      onClick={() => setSignOutModalOpen(true)}
+      className="text-muted-foreground hover:bg-background hover:text-foreground flex w-full items-center justify-center gap-2 rounded-xl p-2.5 transition-colors"
     >
-      {isLoading ? 'Signing out...' : 'Sign out'}
-    </Button>
+      <MdLogout size={22} />
+
+      <span className="text-sm font-medium">Logout</span>
+    </button>
   );
 }

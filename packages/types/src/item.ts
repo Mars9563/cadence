@@ -1,3 +1,5 @@
+import { Weekday } from "./habit";
+
 export type ItemKind = 'normal' | 'task' | 'habit';
 
 export type BaseItem = {
@@ -58,7 +60,7 @@ export type HabitItem = BaseItem & {
   scheduledTime: string | null;
 
   recurrenceKind: 'daily' | 'weekly';
-  recurrenceDays: number[] | null;
+  recurrenceDays: Weekday[] | null;
   recurrenceStartDate: string;
   recurrenceEndDate: string | null;
 
