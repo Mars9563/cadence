@@ -54,7 +54,7 @@ export function Clock() {
               {time}
             </p>
 
-            <p className="text-muted-foreground mt-1 text-sm">{date}</p>
+            <p className="text-muted-foreground mt-1 text-sm" suppressHydrationWarning>{date}</p>
           </div>
 
           <div className="flex flex-row items-center justify-center gap-4">

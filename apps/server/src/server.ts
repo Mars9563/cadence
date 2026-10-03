@@ -1,7 +1,7 @@
-import { app } from './app.js';
+import { httpServer } from './app.js';
 
 const PORT = Number(process.env.PORT) || 4000;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Cadence server running on http://localhost:${PORT}`);
 });

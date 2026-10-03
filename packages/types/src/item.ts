@@ -68,3 +68,9 @@ export type HabitItem = BaseItem & {
 };
 
 export type Item = NormalItem | TaskItem | HabitItem;
+
+export type GetItemsResponse = {
+  normalItems: NormalItem[];
+  taskItems: TaskItem[];
+  habitItems: HabitItem[];
+};

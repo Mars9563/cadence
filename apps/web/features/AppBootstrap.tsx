@@ -2,6 +2,7 @@
 
 import { getProfile } from '@/api/profile';
 import {
+  useFetchItems,
   useSetCadenceDayEnd,
   useSetCurrentDateTime,
   useSetUser,
@@ -17,6 +18,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
   const setUser = useSetUser();
   const setCurrentDateTime = useSetCurrentDateTime();
   const setCadenceDayEnd = useSetCadenceDayEnd();
+  const fetchItems = useFetchItems();
 
   useEffect(() => {
     async function loadProfile() {
@@ -30,8 +32,11 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
       setCadenceDayEnd(getCadenceDayEnd(now, profile.dayEndTime));
     }
 
-    loadProfile();
-  }, [setUser, setCurrentDateTime, setCadenceDayEnd]);
+    // Items load in parallel with the profile. The slice stores its own
+    // loading/error state, so nothing here needs to await or catch it.
+    void fetchItems();
+    void loadProfile();
+  }, [setUser, setCurrentDateTime, setCadenceDayEnd, fetchItems]);
 
   return <>{children}</>;
 }

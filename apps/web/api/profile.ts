@@ -1,7 +1,6 @@
 'use client';
 import { getAccessToken } from '@/lib/supabase/accessToken';
 import { Profile } from '@cadence/types';
-import { error } from 'console';
 
 export async function getProfile(): Promise<Profile> {
   const token = await getAccessToken();
