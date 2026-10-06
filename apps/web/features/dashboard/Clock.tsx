@@ -1,12 +1,16 @@
 'use client';
 
+import { MdAccessTime, MdTimelapse } from 'react-icons/md';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+
 import {
   useCadenceDayEnd,
   useCurrentDateTime,
   useUser,
 } from '@/store/selectors';
+
 import { ClockUpdater } from './ClockUpdater';
 
 function formatRemainingTime(milliseconds: number): string {
@@ -44,28 +48,45 @@ export function Clock() {
     <>
       <ClockUpdater />
 
-      <Card>
-        <CardContent className="flex flex-row items-center justify-between p-5">
-          <div>
-            <p
-              className="text-4xl font-semibold tracking-tight"
-              suppressHydrationWarning
-            >
-              {time}
-            </p>
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] uppercase">
+                <MdAccessTime size={13} />
+                Current time
+              </div>
 
-            <p className="text-muted-foreground mt-1 text-sm" suppressHydrationWarning>{date}</p>
-          </div>
+              <p
+                className="text-4xl font-semibold tracking-[-0.04em] tabular-nums"
+                suppressHydrationWarning
+              >
+                {time}
+              </p>
 
-          <div className="flex flex-row items-center justify-center gap-4">
-            <Separator orientation="vertical" className="h-14" />
+              <p
+                className="text-muted-foreground mt-1 truncate text-xs"
+                suppressHydrationWarning
+              >
+                {date}
+              </p>
+            </div>
 
-            <div>
-              <p className="text-muted-foreground text-sm">Day ends at</p>
+            <Separator orientation="vertical" className="h-16" />
 
-              <p className="text-lg font-medium">{endTime ?? '--:--'}</p>
+            <div className="min-w-24">
+              <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] uppercase">
+                <MdTimelapse size={13} />
+                Cadence
+              </div>
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-[11px]">Day ends at</p>
+
+              <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                {endTime ?? '--:--'}
+              </p>
+
+              <p className="text-muted-foreground mt-0.5 text-[10px] tabular-nums">
                 {remainingTime ?? 'Calculating...'}
               </p>
             </div>

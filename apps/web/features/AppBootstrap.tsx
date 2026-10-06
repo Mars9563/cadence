@@ -19,6 +19,7 @@ import {
   useSetUser,
   useUser,
 } from '@/store/selectors';
+import { LoadingScreen } from './LoadingScreen/loadingScreen';
 
 interface AppBootstrapProps {
   children: ReactNode;
@@ -99,11 +100,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     isSocketConnected;
 
   if (!isAppReady) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading Cadence…</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;
