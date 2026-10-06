@@ -3,37 +3,69 @@
 import { useMemo, useState } from 'react';
 
 import { useCadenceToday } from '@/hooks/useCadenceToday';
-import { useItemsReady, useTaskItems } from '@/store/selectors';
+
+import { formatCadenceDate } from '@/lib/history';
+
+import {
+  useItemsReady,
+  useSelectedDate,
+  useTaskItems,
+} from '@/store/selectors';
+
 import { AddTaskDialog } from '../dialogs/AddTaskDialog';
 import { ItemsSection } from '../ItemSection';
 import { TaskRow } from '../rows/TaskRow';
 
 export function TasksSection() {
   const tasks = useTaskItems();
+
   const ready = useItemsReady();
+
   const today = useCadenceToday();
+
+  const selectedDate = useSelectedDate();
+
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Today and upcoming. Tasks from past days are locked history.
-  const upcomingTasks = useMemo(
-    () => tasks.filter((task) => task.scheduledDate >= today),
-    [tasks, today],
-  );
+  const historyDate =
+    selectedDate !== null && selectedDate < today ? selectedDate : undefined;
+
+  const visibleTasks = useMemo(() => {
+    if (historyDate !== undefined) {
+      return tasks.filter((task) => task.scheduledDate === historyDate);
+    }
+
+    return tasks.filter((task) => task.scheduledDate >= today);
+  }, [historyDate, tasks, today]);
 
   return (
     <>
       <ItemsSection
         title="Tasks"
-        description="Today and what's coming up."
+        description={
+          historyDate === undefined
+            ? "Today and what's coming up."
+            : `Task history for ${formatCadenceDate(historyDate)}.`
+        }
         actionLabel="Add task"
         onAction={() => setDialogOpen(true)}
-        actionDisabled={!ready}
+        actionDisabled={!ready || historyDate !== undefined}
+        showAction={historyDate === undefined}
         isLoading={!ready}
-        isEmpty={upcomingTasks.length === 0}
-        emptyMessage="Nothing scheduled. Add a task to plan your day."
+        isEmpty={visibleTasks.length === 0}
+        emptyMessage={
+          historyDate === undefined
+            ? 'Nothing scheduled. Add a task to plan your day.'
+            : 'No tasks were scheduled for this day.'
+        }
       >
-        {upcomingTasks.map((task) => (
-          <TaskRow key={task.id} task={task} today={today} />
+        {visibleTasks.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            today={today}
+            historyDate={historyDate}
+          />
         ))}
       </ItemsSection>
 

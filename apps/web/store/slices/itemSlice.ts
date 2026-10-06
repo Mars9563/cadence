@@ -22,32 +22,34 @@ export interface itemState {
   itemsStatus: ItemsStatus;
   itemsError: string | null;
 
-  /** Load every item for the signed-in user. Safe to call repeatedly. */
+  /**
+   * Items currently waiting for the server to confirm
+   * a completion through the socket.
+   */
+  pendingCompletionItemIds: string[];
+
   fetchItems: () => Promise<void>;
 
-  /**
-   * Create actions call the backend, then put the stored row in the store.
-   * They throw on failure so the calling dialog can show the error.
-   */
   addNormalItem: (input: CreateNormalItemInput) => Promise<NormalItem>;
   addTaskItem: (input: CreateTaskItemInput) => Promise<TaskItem>;
   addHabitItem: (input: CreateHabitItemInput) => Promise<HabitItem>;
 
-  /** Call on sign-out so the next user never sees stale items. */
+  markItemCompletionPending: (itemId: string) => void;
+  clearItemCompletionPending: (itemId: string) => void;
+  isItemCompletionPending: (itemId: string) => boolean;
+
+  updateNormalItem: (item: NormalItem) => void;
+  updateTaskItem: (item: TaskItem) => void;
   resetItems: () => void;
 }
 
-/* ── ordering ─────────────────────────────────────────────────────────────
- * Normal items: newest first (the API order, new items are prepended).
- * Tasks:        by date, then time (untimed after timed), then newest first.
- * Habits:       by time (untimed last), then title.
- * Kept sorted inside the store so selectors can return stable references.
- */
+/* ── ordering ───────────────────────────────────────────────────────────── */
 
 function compareTime(a: string | null, b: string | null): number {
   if (a === b) return 0;
   if (a === null) return 1;
   if (b === null) return -1;
+
   return a < b ? -1 : 1;
 }
 
@@ -72,24 +74,33 @@ const initialItemsState = {
   normalItems: [] as NormalItem[],
   taskItems: [] as TaskItem[],
   habitItems: [] as HabitItem[],
+
   itemsStatus: 'idle' as ItemsStatus,
   itemsError: null as string | null,
+
+  pendingCompletionItemIds: [] as string[],
 };
 
 export const CreateItemSlice: StateCreator<itemState> = (set, get) => ({
   ...initialItemsState,
 
   fetchItems: async () => {
-    // Also absorbs React Strict Mode's double-invoked effects.
-    if (get().itemsStatus === 'loading') return;
+    if (get().itemsStatus === 'loading') {
+      return;
+    }
 
-    set({ itemsStatus: 'loading', itemsError: null });
+    set({
+      itemsStatus: 'loading',
+      itemsError: null,
+    });
 
     try {
       const result = await getItems();
       const data = result.data;
 
-      if (!data) throw new Error('Failed to fetch items');
+      if (!data) {
+        throw new Error('Failed to fetch items');
+      }
 
       set({
         normalItems: data.normalItems,
@@ -111,9 +122,13 @@ export const CreateItemSlice: StateCreator<itemState> = (set, get) => ({
   addNormalItem: async (input) => {
     const item = (await requestAddNormalItem(input)).data;
 
-    if (!item) throw new Error('Failed to add normal item');
+    if (!item) {
+      throw new Error('Failed to add normal item');
+    }
 
-    set((state) => ({ normalItems: [item, ...state.normalItems] }));
+    set((state) => ({
+      normalItems: [item, ...state.normalItems],
+    }));
 
     return item;
   },
@@ -121,9 +136,13 @@ export const CreateItemSlice: StateCreator<itemState> = (set, get) => ({
   addTaskItem: async (input) => {
     const item = (await requestAddTaskItem(input)).data;
 
-    if (!item) throw new Error('Failed to add task item');
+    if (!item) {
+      throw new Error('Failed to add task item');
+    }
 
-    set((state) => ({ taskItems: sortTasks([...state.taskItems, item]) }));
+    set((state) => ({
+      taskItems: sortTasks([...state.taskItems, item]),
+    }));
 
     return item;
   },
@@ -131,12 +150,59 @@ export const CreateItemSlice: StateCreator<itemState> = (set, get) => ({
   addHabitItem: async (input) => {
     const item = (await requestAddHabitItem(input)).data;
 
-    if (!item) throw new Error('Failed to add habit item');
+    if (!item) {
+      throw new Error('Failed to add habit item');
+    }
 
-    set((state) => ({ habitItems: sortHabits([...state.habitItems, item]) }));
+    set((state) => ({
+      habitItems: sortHabits([...state.habitItems, item]),
+    }));
 
     return item;
   },
 
-  resetItems: () => set({ ...initialItemsState }),
+  markItemCompletionPending: (itemId) => {
+    set((state) => {
+      if (state.pendingCompletionItemIds.includes(itemId)) {
+        return state;
+      }
+
+      return {
+        pendingCompletionItemIds: [...state.pendingCompletionItemIds, itemId],
+      };
+    });
+  },
+
+  clearItemCompletionPending: (itemId) => {
+    set((state) => ({
+      pendingCompletionItemIds: state.pendingCompletionItemIds.filter(
+        (id) => id !== itemId,
+      ),
+    }));
+  },
+
+  isItemCompletionPending: (itemId) =>
+    get().pendingCompletionItemIds.includes(itemId),
+
+  updateNormalItem: (item) => {
+    set((state) => ({
+      normalItems: state.normalItems.map((existing) =>
+        existing.id === item.id ? item : existing,
+      ),
+    }));
+  },
+
+  updateTaskItem: (item) => {
+    set((state) => ({
+      taskItems: sortTasks(
+        state.taskItems.map((existing) =>
+          existing.id === item.id ? item : existing,
+        ),
+      ),
+    }));
+  },
+  resetItems: () =>
+    set({
+      ...initialItemsState,
+    }),
 });

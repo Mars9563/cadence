@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+
+import { MdAdd } from 'react-icons/md';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,9 +8,12 @@ import { Card, CardContent } from '@/components/ui/card';
 interface ItemsSectionProps {
   title: string;
   description: string;
+
   actionLabel: string;
   onAction: () => void;
   actionDisabled?: boolean;
+
+  showAction?: boolean;
 
   isLoading: boolean;
   isEmpty: boolean;
@@ -24,7 +28,9 @@ function RowsSkeleton() {
       {[0, 1, 2].map((row) => (
         <div key={row} className="flex items-center gap-3 px-4 py-3">
           <div className="bg-muted size-4 animate-pulse rounded-sm" />
+
           <div className="bg-muted h-4 flex-1 animate-pulse rounded" />
+
           <div className="bg-muted h-3 w-16 animate-pulse rounded" />
         </div>
       ))}
@@ -38,6 +44,7 @@ export function ItemsSection({
   actionLabel,
   onAction,
   actionDisabled = false,
+  showAction = true,
   isLoading,
   isEmpty,
   emptyMessage,
@@ -52,15 +59,17 @@ export function ItemsSection({
           <p className="text-muted-foreground text-sm">{description}</p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onAction}
-          disabled={actionDisabled}
-        >
-          <Plus />
-          {actionLabel}
-        </Button>
+        {showAction ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onAction}
+            disabled={actionDisabled}
+          >
+            <MdAdd />
+            {actionLabel}
+          </Button>
+        ) : null}
       </div>
 
       <Card>

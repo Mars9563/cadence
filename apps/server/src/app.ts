@@ -1,10 +1,11 @@
+import { config } from 'dotenv';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import { config } from 'dotenv';
+import { createServer } from 'http';
 import profileRoutes from './routes/profile.route';
 import itemsRoutes from './routes/items.route';
-import { createServer } from 'http';
+import habitCompletionsRoute from './routes/habit-completions.route';
 
 export const app = express();
 
@@ -18,8 +19,6 @@ app.use(
 
 app.use(express.json());
 
-export const httpServer = createServer(app);
-
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -29,3 +28,5 @@ app.get('/health', (_req, res) => {
 
 app.use(profileRoutes);
 app.use(itemsRoutes);
+app.use(habitCompletionsRoute);
+export const httpServer = createServer(app);

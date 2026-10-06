@@ -1,30 +1,60 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { Orb } from '@yogesharc/thinking-orbs';
+import { MdLock } from 'react-icons/md';
 
 interface ItemRowLayoutProps {
   title: string;
   description?: string | null;
-  /** Small muted pieces on the right, e.g. ['Mon Wed Fri', '07:00']. */
+
   meta?: string[];
+
   checked?: boolean;
+
+  loading?: boolean;
+
+  /**
+   * Historical item that was expected but was not completed.
+   */
+  locked?: boolean;
+
+  onCheckedChange?: (checked: boolean) => void;
 }
 
-/**
- * Shared row shell for habits, tasks and normal items.
- *
- * The checkbox is display-only for now (completion is intentionally not
- * wired yet). To enable it later, add an `onCheckedChange` prop and drop
- * `disabled`.
- */
 export function ItemRowLayout({
   title,
   description,
   meta = [],
   checked = false,
+  loading = false,
+  locked = false,
+  onCheckedChange,
 }: ItemRowLayoutProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <Checkbox checked={checked} disabled aria-label={title} />
+      {loading ? (
+        <div
+          className="flex size-5 items-center justify-center"
+          aria-label="Completing"
+        >
+          <Orb state="reasoning" size={20} label="Completing" />
+        </div>
+      ) : locked ? (
+        <div
+          className="text-muted-foreground flex size-5 items-center justify-center"
+          aria-label="Locked"
+          title="Locked"
+        >
+          <MdLock size={18} />
+        </div>
+      ) : (
+        <Checkbox
+          checked={checked}
+          disabled={!onCheckedChange}
+          onCheckedChange={onCheckedChange}
+          aria-label={title}
+        />
+      )}
 
       <div className="min-w-0 flex-1">
         <p
@@ -32,6 +62,7 @@ export function ItemRowLayout({
           className={cn(
             'truncate text-sm',
             checked && 'text-muted-foreground line-through',
+            locked && 'text-muted-foreground',
           )}
         >
           {title}

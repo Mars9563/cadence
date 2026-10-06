@@ -1,4 +1,10 @@
-import { HabitItem, NormalItem, TaskItem, Weekday } from '@cadence/types';
+import {
+  HabitItem,
+  NormalItem,
+  TaskItem,
+  Weekday,
+  HabitCompletion,
+} from '@cadence/types';
 import { z } from 'zod';
 
 import {
@@ -276,4 +282,210 @@ export async function addHabitItemByUserId(
     success: true,
     data: mapDbItemToFrontend(data as DbItem) as HabitItem,
   };
+}
+
+// Replace the existing completion section in items.service.ts with this code.
+// The existing file already imports HabitItem, NormalItem, TaskItem and defines
+// DbItem, ITEM_SELECT, createSupabaseClient, and mapDbItemToFrontend.
+// Add HabitCompletion to the @cadence/types import.
+//
+// @cadence/types import should become:
+// import { HabitCompletion, HabitItem, NormalItem, TaskItem, Weekday } from '@cadence/types';
+
+export type CompleteItemResult =
+  | {
+      kind: 'normal';
+      item: NormalItem;
+    }
+  | {
+      kind: 'task';
+      item: TaskItem;
+    }
+  | {
+      kind: 'habit';
+      completion: HabitCompletion;
+    };
+
+export async function completeItemByUserId(
+  userId: string,
+  token: string,
+  itemId: string,
+): Promise<CompleteItemResult> {
+  const supabase = createSupabaseClient(token);
+
+  // Only itemId is accepted from the client. The DB row determines the kind.
+  const { data: itemData, error: itemError } = await supabase
+    .from('items')
+    .select(ITEM_SELECT)
+    .eq('id', itemId)
+    .eq('user_id', userId)
+    .single();
+
+  if (itemError || !itemData) {
+    console.error('Failed to fetch item before completion:', itemError);
+    throw new Error('ITEM_NOT_FOUND');
+  }
+
+  const item = itemData as DbItem;
+
+  switch (item.kind) {
+    case 'normal':
+    case 'task': {
+      // A task can only be completed on its scheduled Cadence date.
+      // Future tasks must remain incomplete until their scheduled date arrives.
+      if (item.kind === 'task') {
+        const { data: cadenceDate, error: cadenceDateError } =
+          await supabase.rpc('app_today', { p_user_id: userId });
+
+        if (cadenceDateError || !cadenceDate) {
+          console.error(
+            'Failed to resolve current Cadence date:',
+            cadenceDateError,
+          );
+
+          throw new Error('CADENCE_DATE_RESOLUTION_FAILED');
+        }
+
+        if (item.scheduled_date! > String(cadenceDate)) {
+          throw new Error('TASK_NOT_YET_DUE');
+        }
+      }
+
+      // Normal/task completion is stored directly on items.completed_at.
+      if (item.completed_at) {
+        return {
+          kind: item.kind,
+          item: mapDbItemToFrontend(item) as NormalItem | TaskItem,
+        } as CompleteItemResult;
+      }
+
+      const { data, error } = await supabase
+        .from('items')
+        .update({ completed_at: new Date().toISOString() })
+        .eq('id', item.id)
+        .eq('user_id', userId)
+        .select(ITEM_SELECT)
+        .single();
+
+      if (error || !data) {
+        console.error(`Failed to complete ${item.kind} item:`, error);
+
+        throw new Error(
+          item.kind === 'normal'
+            ? 'NORMAL_ITEM_COMPLETION_FAILED'
+            : 'TASK_ITEM_COMPLETION_FAILED',
+        );
+      }
+
+      return {
+        kind: item.kind,
+        item: mapDbItemToFrontend(data as DbItem) as NormalItem | TaskItem,
+      } as CompleteItemResult;
+    }
+
+    case 'habit': {
+      // Never trust an occurrence date from the client.
+      // app_today() uses the user's Cadence day boundary in the database.
+      const { data: cadenceDate, error: cadenceDateError } = await supabase.rpc(
+        'app_today',
+        { p_user_id: userId },
+      );
+
+      if (cadenceDateError || !cadenceDate) {
+        console.error(
+          'Failed to resolve current Cadence date:',
+          cadenceDateError,
+        );
+        throw new Error('CADENCE_DATE_RESOLUTION_FAILED');
+      }
+
+      const occurrenceDate = String(cadenceDate);
+
+      // First make retries idempotent.
+      const { data: existingCompletion, error: existingCompletionError } =
+        await supabase
+          .from('habit_completions')
+          .select('id, user_id, item_id, occurrence_date, completed_at')
+          .eq('item_id', item.id)
+          .eq('user_id', userId)
+          .eq('occurrence_date', occurrenceDate)
+          .maybeSingle();
+
+      if (existingCompletionError) {
+        console.error(
+          'Failed to check existing habit completion:',
+          existingCompletionError,
+        );
+        throw new Error('HABIT_COMPLETION_CHECK_FAILED');
+      }
+
+      if (existingCompletion) {
+        return {
+          kind: 'habit',
+          completion: {
+            id: existingCompletion.id,
+            userId: existingCompletion.user_id,
+            itemId: existingCompletion.item_id,
+            occurrenceDate: existingCompletion.occurrence_date,
+            completedAt: existingCompletion.completed_at,
+          },
+        };
+      }
+
+      const { data: completion, error: completionError } = await supabase
+        .from('habit_completions')
+        .insert({
+          user_id: userId,
+          item_id: item.id,
+          item_kind: 'habit',
+          occurrence_date: occurrenceDate,
+        })
+        .select('id, user_id, item_id, occurrence_date, completed_at')
+        .single();
+
+      if (completionError || !completion) {
+        // The DB unique constraint prevents two completions for the same
+        // habit occurrence. If another request won the race, return that row.
+        if (completionError?.code === '23505') {
+          const { data: concurrentCompletion } = await supabase
+            .from('habit_completions')
+            .select('id, user_id, item_id, occurrence_date, completed_at')
+            .eq('item_id', item.id)
+            .eq('user_id', userId)
+            .eq('occurrence_date', occurrenceDate)
+            .single();
+
+          if (concurrentCompletion) {
+            return {
+              kind: 'habit',
+              completion: {
+                id: concurrentCompletion.id,
+                userId: concurrentCompletion.user_id,
+                itemId: concurrentCompletion.item_id,
+                occurrenceDate: concurrentCompletion.occurrence_date,
+                completedAt: concurrentCompletion.completed_at,
+              },
+            };
+          }
+        }
+
+        console.error('Failed to complete habit item:', completionError);
+        throw new Error('HABIT_ITEM_COMPLETION_FAILED');
+      }
+
+      return {
+        kind: 'habit',
+        completion: {
+          id: completion.id,
+          userId: completion.user_id,
+          itemId: completion.item_id,
+          occurrenceDate: completion.occurrence_date,
+          completedAt: completion.completed_at,
+        },
+      };
+    }
+
+    default:
+      throw new Error('UNSUPPORTED_ITEM_KIND');
+  }
 }

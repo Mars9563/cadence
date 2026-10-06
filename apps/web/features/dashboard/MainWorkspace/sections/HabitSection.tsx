@@ -3,41 +3,72 @@
 import { useMemo, useState } from 'react';
 
 import { useCadenceToday } from '@/hooks/useCadenceToday';
-import { useHabitItems, useItemsReady } from '@/store/selectors';
+
+import { formatCadenceDate, habitOccursOnDate } from '@/lib/history';
+
+import {
+  useHabitItems,
+  useItemsReady,
+  useSelectedDate,
+} from '@/store/selectors';
+
 import { AddHabitDialog } from '../dialogs/AddHabitDialog';
 import { ItemsSection } from '../ItemSection';
 import { HabitRow } from '../rows/Habitrow';
 
 export function HabitsSection() {
   const habits = useHabitItems();
+
   const ready = useItemsReady();
+
   const today = useCadenceToday();
+
+  const selectedDate = useSelectedDate();
+
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Habits whose end date has passed are history, so they aren't listed.
-  const activeHabits = useMemo(
-    () =>
-      habits.filter(
-        (habit) =>
-          habit.recurrenceEndDate === null || habit.recurrenceEndDate >= today,
-      ),
-    [habits, today],
-  );
+  const historyDate =
+    selectedDate !== null && selectedDate < today ? selectedDate : undefined;
+
+  const visibleHabits = useMemo(() => {
+    if (historyDate !== undefined) {
+      return habits.filter((habit) => habitOccursOnDate(habit, historyDate));
+    }
+
+    return habits.filter(
+      (habit) =>
+        habit.recurrenceEndDate === null || habit.recurrenceEndDate >= today,
+    );
+  }, [habits, historyDate, today]);
 
   return (
     <>
       <ItemsSection
         title="Habits"
-        description="Build the person you want to be."
+        description={
+          historyDate === undefined
+            ? 'Build the person you want to be.'
+            : `Habit history for ${formatCadenceDate(historyDate)}.`
+        }
         actionLabel="Add habit"
         onAction={() => setDialogOpen(true)}
-        actionDisabled={!ready}
+        actionDisabled={!ready || historyDate !== undefined}
+        showAction={historyDate === undefined}
         isLoading={!ready}
-        isEmpty={activeHabits.length === 0}
-        emptyMessage="No habits yet. Add one to start a routine."
+        isEmpty={visibleHabits.length === 0}
+        emptyMessage={
+          historyDate === undefined
+            ? 'No habits yet. Add one to start a routine.'
+            : 'No habit was scheduled for this day.'
+        }
       >
-        {activeHabits.map((habit) => (
-          <HabitRow key={habit.id} habit={habit} today={today} />
+        {visibleHabits.map((habit) => (
+          <HabitRow
+            key={habit.id}
+            habit={habit}
+            today={today}
+            historyDate={historyDate}
+          />
         ))}
       </ItemsSection>
 

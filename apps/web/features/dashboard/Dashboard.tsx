@@ -6,7 +6,7 @@ import { MainWorkspace } from './MainWorkspace/MainWorkspace';
 export function Dashboard() {
   return (
     <main className="bg-secondary flex-1 overflow-hidden rounded-lg border">
-      <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_35%]">
+      <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_30%]">
         <MainWorkspace />
 
         {/* ─────────────────────────────────────────────

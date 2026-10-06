@@ -1,8 +1,17 @@
-import { Server } from 'socket.io'
+import { Server } from 'socket.io';
 import { httpServer } from '../app';
+import { socketAuth } from './middleware/auth';
+import { registerSocketHandlers } from './handlers/connection.handler';
 
-const io = new Server(httpServer);
+export const io = new Server(httpServer, {
+  cors: {
+    origin: 'http://localhost:3000',
+    credentials: true,
+  },
+});
 
-io.on("connection", (socket) => {
-    console.log(socket.id);
-})
+io.use(socketAuth);
+
+io.on('connection', (socket) => {
+  registerSocketHandlers(socket);
+});

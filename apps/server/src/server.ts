@@ -1,3 +1,4 @@
+import './realtime/index.js';
 import { httpServer } from './app.js';
 
 const PORT = Number(process.env.PORT) || 4000;
