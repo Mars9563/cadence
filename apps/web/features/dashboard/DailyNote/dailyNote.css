@@ -1,0 +1,487 @@
+/* ==========================================================================
+   Daily Note — Cadence writing surface
+   ========================================================================== */
+
+.daily-note-shell {
+  --daily-note-panel: var(--card);
+  --daily-note-canvas: var(--background);
+  --daily-note-toolbar: color-mix(in oklch, var(--card) 92%, var(--background));
+
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+
+  border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+  border-radius: 1rem;
+  background: var(--daily-note-panel);
+  color: var(--foreground);
+  box-shadow: 0 18px 48px
+    color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+.daily-note-loading {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+   Note header
+   -------------------------------------------------------------------------- */
+
+.daily-note-header {
+  display: flex;
+  min-height: 72px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.15rem 0.8rem 1.25rem;
+
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in oklch, var(--primary) 7%, transparent),
+      transparent 34%
+    ),
+    var(--daily-note-panel);
+}
+
+.daily-note-heading {
+  min-width: 0;
+}
+
+.daily-note-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  margin-bottom: 0.2rem;
+
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.daily-note-kicker-dot {
+  width: 0.34rem;
+  height: 0.34rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 11%, transparent);
+}
+
+.daily-note-heading h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.daily-note-heading p {
+  margin: 0.28rem 0 0;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Scroll owner + editor frame
+
+   Scroll ownership: the shadcn ScrollArea viewport is the ONLY scrolling
+   element. Everything the editor renders (sticky toolbar + editable surface)
+   is plain, overflow-visible content inside it.
+
+   Sizing: the viewport is a flex column and the editor root is
+   `flex: 1 0 auto`, so the editor is at least as tall as the viewport and
+   grows with its content. No percentage heights are involved.
+   -------------------------------------------------------------------------- */
+
+.daily-note-scroll {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: var(--daily-note-canvas);
+}
+
+.daily-note-scroll [data-slot='scroll-area-viewport'] {
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+}
+
+.daily-note-scroll [data-slot='scroll-area-thumb'] {
+  background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+}
+
+.daily-note-editor.mdxeditor {
+  /* MDXEditor uses these variables for its own Radix-based UI. */
+  --baseBase: var(--background);
+  --baseBgSubtle: color-mix(in oklch, var(--card) 82%, var(--background));
+  --baseBg: var(--card);
+  --baseBgHover: var(--accent);
+  --baseBgActive: color-mix(in oklch, var(--accent) 86%, var(--background));
+  --baseLine: var(--border);
+  --baseBorder: var(--border);
+  --baseBorderHover: var(--muted-foreground);
+  --baseSolid: var(--foreground);
+  --baseSolidHover: var(--foreground);
+  --baseText: var(--foreground);
+  --baseTextContrast: var(--background);
+
+  --accentBase: var(--background);
+  --accentBgSubtle: color-mix(in oklch, var(--primary) 8%, var(--background));
+  --accentBg: color-mix(in oklch, var(--primary) 12%, var(--background));
+  --accentBgHover: color-mix(in oklch, var(--primary) 16%, var(--background));
+  --accentBgActive: color-mix(in oklch, var(--primary) 20%, var(--background));
+  --accentLine: color-mix(in oklch, var(--primary) 35%, var(--border));
+  --accentBorder: color-mix(in oklch, var(--primary) 40%, var(--border));
+  --accentBorderHover: var(--primary);
+  --accentSolid: var(--primary);
+  --accentSolidHover: var(--primary);
+  --accentText: var(--primary);
+  --accentTextContrast: var(--background);
+
+  display: flex;
+  min-width: 0;
+  flex: 1 0 auto;
+  flex-direction: column;
+
+  /* Sticky toolbar needs every ancestor up to the scroll viewport to be
+     overflow: visible. */
+  overflow: visible;
+
+  border: 0;
+  border-radius: 0;
+  background: var(--daily-note-canvas);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Toolbar
+   -------------------------------------------------------------------------- */
+
+.daily-note-editor .mdxeditor-toolbar,
+.daily-note-editor .daily-note-toolbar {
+  display: flex;
+  min-height: 46px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.18rem;
+  padding: 0.38rem 0.5rem;
+
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+  border-radius: 0;
+  background: var(--daily-note-toolbar);
+  color: var(--muted-foreground);
+
+  /* Stays pinned to the top of the ScrollArea viewport while the document
+     scrolls beneath it. Must be opaque so text never shows through. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* MDXEditor's Radix toolbar controls. */
+.daily-note-editor .mdxeditor-toolbar button,
+.daily-note-editor .mdxeditor-toolbar [role='button'],
+.daily-note-editor .mdxeditor-toolbar [role='combobox'] {
+  box-sizing: border-box;
+  min-width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 0.42rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.daily-note-editor .mdxeditor-toolbar button:hover,
+.daily-note-editor .mdxeditor-toolbar [role='button']:hover,
+.daily-note-editor .mdxeditor-toolbar [role='combobox']:hover {
+  border-color: color-mix(in oklch, var(--border) 80%, transparent);
+  background: color-mix(in oklch, var(--accent) 72%, transparent);
+  color: var(--foreground);
+}
+
+.daily-note-editor .mdxeditor-toolbar button:focus-visible,
+.daily-note-editor .mdxeditor-toolbar [role='button']:focus-visible,
+.daily-note-editor .mdxeditor-toolbar [role='combobox']:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--primary) 65%, transparent);
+  outline-offset: 1px;
+}
+
+.daily-note-editor .mdxeditor-toolbar button[data-state='on'],
+.daily-note-editor .mdxeditor-toolbar [role='button'][data-state='on'] {
+  border-color: color-mix(in oklch, var(--primary) 28%, var(--border));
+  background: color-mix(in oklch, var(--primary) 13%, var(--background));
+  color: var(--foreground);
+}
+
+/* BlockTypeSelect is a Radix Select, not a native <select>. */
+.daily-note-editor .mdxeditor-toolbar [data-radix-select-trigger],
+.daily-note-editor .mdxeditor-toolbar [aria-haspopup='listbox'] {
+  width: 116px;
+  justify-content: space-between;
+  padding: 0 0.58rem;
+  background: color-mix(in oklch, var(--background) 72%, var(--card));
+  color: var(--foreground);
+}
+
+.daily-note-editor .mdxeditor-toolbar [data-radix-select-trigger] svg,
+.daily-note-editor .mdxeditor-toolbar [aria-haspopup='listbox'] svg,
+.daily-note-editor .mdxeditor-toolbar button svg,
+.daily-note-editor .mdxeditor-toolbar [role='button'] svg {
+  color: currentColor;
+  fill: none;
+  stroke: currentColor;
+}
+
+.daily-note-editor .mdxeditor-toolbar [data-radix-select-trigger] svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.daily-note-editor .mdxeditor-toolbar [data-radix-select-trigger]:hover,
+.daily-note-editor .mdxeditor-toolbar [aria-haspopup='listbox']:hover {
+  background: var(--accent);
+}
+
+.daily-note-editor .mdxeditor-toolbar [data-orientation='vertical'] {
+  width: 1px;
+  height: 20px;
+  margin: 0 0.25rem;
+  background: color-mix(in oklch, var(--border) 85%, transparent);
+}
+
+/* Radix select content is rendered in the editor popup container. */
+.daily-note-editor .mdxeditor-select-content,
+.daily-note-editor
+  .mdxeditor-popup-container
+  [data-radix-popper-content-wrapper] {
+  color: var(--foreground);
+}
+
+.daily-note-editor .mdxeditor-select-content [role='option'][data-highlighted],
+.daily-note-editor
+  .mdxeditor-select-content
+  [role='option'][data-state='checked'] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.daily-note-editor .mdxeditor-select-content {
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--card);
+  box-shadow: 0 14px 34px
+    color-mix(in oklch, var(--foreground) 14%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Writing canvas
+
+   MDXEditor renders
+     .mdxeditor > .mdxeditor-root-contenteditable
+                > .mdxeditor-contenteditable-wrapper
+                > [contenteditable]
+   Every level has to stretch (width AND height) for the contenteditable
+   itself to cover the canvas. By default the first one is a row flexbox, so
+   the wrapper shrink-wraps its text and the editable area ends up a narrow
+   column on the left.
+   -------------------------------------------------------------------------- */
+
+.daily-note-editor .mdxeditor-root-contenteditable {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: visible;
+  background: var(--daily-note-canvas);
+}
+
+/* A one-cell grid (not flex): Lexical warns that Chrome can misplace focus
+   for clicks near a contenteditable whose direct parent is a flexbox. The
+   single implicit row still stretches the editable to the wrapper's height. */
+.daily-note-editor .mdxeditor-contenteditable-wrapper {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.daily-note-editor .daily-note-content {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+
+  /* The editable element spans the full canvas; the padding keeps the text
+     in a readable column (max 820px) centred inside it. */
+  padding: 2.35rem max(1.25rem, calc((100% - 820px) / 2)) 6rem;
+
+  background: transparent;
+  color: var(--foreground);
+  caret-color: var(--primary);
+  box-shadow: none;
+
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.94rem;
+  line-height: 1.85;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.daily-note-editor .daily-note-content ::selection {
+  background: color-mix(in oklch, var(--primary) 28%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Markdown typography
+   -------------------------------------------------------------------------- */
+
+.daily-note-editor .daily-note-content p {
+  margin: 0 0 1rem;
+  color: color-mix(in oklch, var(--foreground) 94%, transparent);
+}
+
+.daily-note-editor .daily-note-content h1,
+.daily-note-editor .daily-note-content h2,
+.daily-note-editor .daily-note-content h3,
+.daily-note-editor .daily-note-content h4,
+.daily-note-editor .daily-note-content h5,
+.daily-note-editor .daily-note-content h6 {
+  color: var(--foreground);
+  font-family: var(--font-heading);
+  letter-spacing: -0.035em;
+  border-bottom: 0;
+}
+
+.daily-note-editor .daily-note-content h1 {
+  margin: 0.25rem 0 1rem;
+  font-size: 2.15rem;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.daily-note-editor .daily-note-content h2 {
+  margin: 2rem 0 0.8rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.daily-note-editor .daily-note-content h3 {
+  margin: 1.5rem 0 0.6rem;
+  font-size: 1.16rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.daily-note-editor .daily-note-content ul,
+.daily-note-editor .daily-note-content ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+  color: var(--foreground);
+}
+
+.daily-note-editor .daily-note-content ul {
+  list-style: disc;
+}
+
+.daily-note-editor .daily-note-content ol {
+  list-style: decimal;
+}
+
+.daily-note-editor .daily-note-content li {
+  margin: 0.3rem 0;
+  color: var(--foreground);
+}
+
+.daily-note-editor .daily-note-content blockquote {
+  margin: 1.25rem 0;
+  padding: 0.35rem 0 0.35rem 1.1rem;
+  border-left: 2px solid var(--primary);
+  color: var(--muted-foreground);
+}
+
+.daily-note-editor .daily-note-content a {
+  /* Blend toward the foreground so links stay legible in every theme (the
+     dark theme's raw --primary is low-contrast on the dark canvas). */
+  color: color-mix(in oklch, var(--primary) 60%, var(--foreground));
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 45%, transparent);
+  text-underline-offset: 0.16em;
+}
+
+.daily-note-editor .daily-note-content code {
+  padding: 0.12rem 0.3rem;
+  border: 1px solid color-mix(in oklch, var(--border) 75%, transparent);
+  border-radius: 0.3rem;
+  background: color-mix(in oklch, var(--muted) 70%, var(--background));
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.daily-note-editor .daily-note-content pre {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 0.65rem;
+  background: var(--muted);
+}
+
+.daily-note-editor .daily-note-content pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.daily-note-editor .daily-note-content hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .daily-note-header {
+    min-height: 66px;
+    padding-right: 0.9rem;
+    padding-left: 1rem;
+  }
+
+  .daily-note-editor .mdxeditor-toolbar {
+    overflow-x: auto;
+  }
+
+  .daily-note-editor .daily-note-content {
+    padding: 1.75rem 1.2rem 4rem;
+  }
+}

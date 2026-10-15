@@ -6,7 +6,7 @@ import { createServer } from 'http';
 import profileRoutes from './routes/profile.route';
 import itemsRoutes from './routes/items.route';
 import habitCompletionsRoute from './routes/habit-completions.route';
-
+import dailyNotesRoute from './routes/daily-notes.route'
 export const app = express();
 
 app.use(helmet());
@@ -29,4 +29,5 @@ app.get('/health', (_req, res) => {
 app.use(profileRoutes);
 app.use(itemsRoutes);
 app.use(habitCompletionsRoute);
+app.use(dailyNotesRoute);
 export const httpServer = createServer(app);

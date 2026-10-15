@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client';
 import {
   useConnectSocket,
   useDisconnectSocket,
+  useEnsureTodayDailyNote,
+  useFetchDailyNotes,
   useFetchHabitCompletions,
   useFetchItems,
   useHabitCompletionsStatus,
@@ -18,6 +20,7 @@ import {
   useSetCurrentDateTime,
   useSetUser,
   useUser,
+  useDailyNotesStatus,
 } from '@/store/selectors';
 import { LoadingScreen } from './LoadingScreen/loadingScreen';
 
@@ -25,11 +28,67 @@ interface AppBootstrapProps {
   children: ReactNode;
 }
 
+/**
+ * Returns the current Cadence date for the given instant.
+ *
+ * Cadence uses:
+ *
+ *   Asia/Kolkata
+ *   minus the user's day_end_time
+ *
+ * and then takes the calendar date.
+ *
+ * This mirrors the database's app_today() calculation.
+ */
+function getCurrentCadenceDate(now: Date, dayEndTime: string): string {
+  const [hours = '0', minutes = '0', seconds = '0'] = dayEndTime.split(':');
+
+  const boundarySeconds =
+    Number(hours) * 60 * 60 + Number(minutes) * 60 + Number(seconds);
+
+  const istDateParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+
+  const parts = Object.fromEntries(
+    istDateParts.map(({ type, value }) => [type, value]),
+  );
+
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
+  const hour = Number(parts.hour);
+  const minute = Number(parts.minute);
+  const second = Number(parts.second);
+
+  const currentSeconds = hour * 60 * 60 + minute * 60 + second;
+
+  /*
+   * Build the calendar date in UTC so that date arithmetic is independent
+   * from the browser's local timezone.
+   */
+  const cadenceDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (currentSeconds < boundarySeconds) {
+    cadenceDate.setUTCDate(cadenceDate.getUTCDate() - 1);
+  }
+
+  return cadenceDate.toISOString().slice(0, 10);
+}
+
 export function AppBootstrap({ children }: AppBootstrapProps) {
   const user = useUser();
 
   const itemsStatus = useItemsStatus();
   const habitCompletionsStatus = useHabitCompletionsStatus();
+  const dailyNotesStatus = useDailyNotesStatus();
 
   const isSocketConnected = useIsSocketConnected();
 
@@ -40,18 +99,44 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
   const fetchItems = useFetchItems();
   const fetchHabitCompletions = useFetchHabitCompletions();
 
+  const fetchDailyNotes = useFetchDailyNotes();
+  const ensureTodayDailyNote = useEnsureTodayDailyNote();
+
   const connectSocket = useConnectSocket();
   const disconnectSocket = useDisconnectSocket();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadProfile() {
       const profile = await getProfile();
+
+      if (cancelled) {
+        return;
+      }
 
       const now = new Date();
 
       setCurrentDateTime(now);
       setUser(profile);
       setCadenceDayEnd(getCadenceDayEnd(now, profile.dayEndTime));
+
+      /*
+       * Daily Notes depend on the user's Cadence date,
+       * which depends on their profile day_end_time.
+       *
+       * Therefore we don't attempt to ensure today's note
+       * until the profile has loaded.
+       */
+      await fetchDailyNotes();
+
+      if (cancelled) {
+        return;
+      }
+
+      const currentCadenceDate = getCurrentCadenceDate(now, profile.dayEndTime);
+
+      await ensureTodayDailyNote(currentCadenceDate);
     }
 
     async function connectSockets() {
@@ -61,7 +146,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
       const token = data.session?.access_token;
 
-      if (token) {
+      if (token && !cancelled) {
         connectSocket(token);
       }
     }
@@ -70,13 +155,14 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     void fetchItems();
     void fetchHabitCompletions();
 
-    // Load profile.
+    // Load profile + Daily Notes.
     void loadProfile();
 
     // Start socket connection.
     void connectSockets();
 
     return () => {
+      cancelled = true;
       disconnectSocket();
     };
   }, [
@@ -85,6 +171,8 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     setCadenceDayEnd,
     fetchItems,
     fetchHabitCompletions,
+    fetchDailyNotes,
+    ensureTodayDailyNote,
     connectSocket,
     disconnectSocket,
   ]);
@@ -97,6 +185,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     user !== null &&
     itemsStatus === 'ready' &&
     habitCompletionsStatus === 'ready' &&
+    dailyNotesStatus === 'ready' &&
     isSocketConnected;
 
   if (!isAppReady) {

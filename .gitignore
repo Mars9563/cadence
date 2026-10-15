@@ -166,3 +166,5 @@ logs/
 *.rej
 ```
 
+# personally added
+database-schema.txt

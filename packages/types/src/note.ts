@@ -14,6 +14,20 @@ export type DailyNote = {
   updatedAt: string;
 };
 
+/**
+ * Acknowledgement for a persisted Daily Note content update.
+ *
+ * Deliberately carries no content or timestamps: the client's editor is the
+ * source of truth while editing, so the server never echoes a document back.
+ *
+ * `saveId` is chosen by the client for each save attempt and echoed back, so
+ * an acknowledgement can be matched to the exact save it belongs to.
+ */
+export type DailyNoteSaveAck = {
+  noteId: string;
+  saveId: number;
+};
+
 export type Note = {
   id: string;
   userId: string;

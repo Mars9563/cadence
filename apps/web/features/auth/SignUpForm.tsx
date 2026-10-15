@@ -120,8 +120,6 @@ export function SignUpForm() {
       },
     });
 
-    console.log('OAuth URL:', data?.url);
-
     if (error) {
       setAuthError(error.message);
 

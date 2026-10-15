@@ -113,7 +113,7 @@ export async function addDailyNoteByUserId(
 }
 
 interface DailyNoteUpdateResponse {
-  dailyNote: DailyNote;
+  noteId: string;
 }
 
 export async function updateDailyNoteById(
@@ -123,14 +123,18 @@ export async function updateDailyNoteById(
 ): Promise<apiResponse<DailyNoteUpdateResponse>> {
   const supabase = createSupabaseClient(token);
 
-  const { data, error } = await supabase
+  /*
+   * No `.select()`: PostgREST performs the write and returns only the row
+   * count, instead of reading the updated row back.
+   *
+   * RLS hides rows the caller does not own, so a note that does not exist
+   * or belongs to someone else yields count === 0. That must not be
+   * reported as a successful save.
+   */
+  const { error, count } = await supabase
     .from('daily_notes')
-    .update({
-      content,
-    })
-    .eq('id', noteId)
-    .select('*')
-    .single();
+    .update({ content }, { count: 'exact' })
+    .eq('id', noteId);
 
   if (error) {
     console.log('Failed to update daily note:', error);
@@ -138,12 +142,16 @@ export async function updateDailyNoteById(
     throw new Error('Failed to update daily note');
   }
 
-  const dailyNote = mapDbDailyNoteToFrontend(data as DbDailyNote);
+  if (!count) {
+    console.log('Daily note update affected no rows:', noteId);
+
+    throw new Error('Failed to update daily note');
+  }
 
   return {
     success: true,
     data: {
-      dailyNote,
+      noteId,
     },
   };
 }

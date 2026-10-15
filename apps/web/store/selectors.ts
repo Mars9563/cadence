@@ -137,3 +137,33 @@ export const useClearItemCompletionPending = () =>
 // socket completion ----
 
 export const useCompleteItem = () => useCadenceStore((s) => s.completeItem);
+
+
+// daily note selectors ----
+
+export const useDailyNotes = () =>
+  useCadenceStore((s) => s.dailyNotes);
+
+export const useDailyNotesStatus = () =>
+  useCadenceStore((s) => s.dailyNotesStatus);
+
+export const useDailyNotesError = () =>
+  useCadenceStore((s) => s.dailyNotesError);
+
+export const useDailyNotesReady = () =>
+  useCadenceStore((s) => s.dailyNotesStatus === 'ready');
+
+export const useFetchDailyNotes = () =>
+  useCadenceStore((s) => s.fetchDailyNotes);
+
+export const useEnsureTodayDailyNote = () =>
+  useCadenceStore((s) => s.ensureTodayDailyNote);
+
+export const useUpsertDailyNote = () =>
+  useCadenceStore((s) => s.upsertDailyNote);
+
+export const useSetDailyNoteContent = () =>
+  useCadenceStore((s) => s.setDailyNoteContent);
+
+export const useResetDailyNotes = () =>
+  useCadenceStore((s) => s.resetDailyNotes);

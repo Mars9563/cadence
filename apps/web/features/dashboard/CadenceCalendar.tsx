@@ -199,25 +199,45 @@ export function CadenceCalendar() {
           classNames={{
             root: 'w-full',
             months: 'w-full',
-            month: 'w-full',
-            month_caption: 'relative flex h-10 items-center justify-center',
+
+            // THIS IS THE IMPORTANT CHANGE
+            month: 'grid w-full grid-cols-[auto_1fr_auto]',
+
+            month_caption: 'flex h-10 min-w-0 items-center justify-center',
+
             caption_label: 'text-sm font-semibold tracking-tight',
-            nav: 'absolute inset-x-0 top-1 flex items-center justify-between',
+
+            // nav is irrelevant with this DayPicker layout
+            nav: '',
+
             button_previous:
-              'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-8 items-center justify-center rounded-lg transition-colors',
+              'inline-flex size-8 items-center justify-center rounded-lg border border-border bg-muted/60 text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+
             button_next:
-              'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-8 items-center justify-center rounded-lg transition-colors',
+              'inline-flex size-8 items-center justify-center rounded-lg border border-border bg-muted/60 text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+
             weekdays: 'w-full',
+
             weekday:
               'text-muted-foreground py-2 text-center text-[10px] font-semibold uppercase tracking-wider',
-            month_grid: 'w-full table-fixed border-collapse',
+
+            // THIS MAKES THE TABLE THE SECOND ROW
+            month_grid: 'col-span-3 w-full table-fixed border-collapse',
+
             week: 'w-full',
+
             day: 'h-11 p-0 text-center align-middle',
+
             day_button:
               'mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-xs font-medium transition-all hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selected: 'bg-background text-primary-foreground hover:bg-background rounded-2xl',
+
+            selected:
+              'bg-background text-primary-foreground hover:bg-background rounded-2xl',
+
             today: 'bg-muted text-foreground font-semibold ring-1 ring-border',
+
             disabled: 'text-muted-foreground/35 cursor-not-allowed',
+
             outside: 'text-muted-foreground/30',
           }}
           components={{

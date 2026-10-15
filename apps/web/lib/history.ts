@@ -62,20 +62,22 @@ function parseTimeToSeconds(value: string): number {
  * 3. If it is before the user's Cadence day boundary,
  *    the timestamp belongs to the previous Cadence date.
  */
+const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
 export function getCadenceDateFromTimestamp(
   timestamp: string,
   dayEndTime: string,
 ): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date(timestamp));
+  const parts = IST_DATE_TIME_FORMATTER.formatToParts(new Date(timestamp));
 
   const values = Object.fromEntries(
     parts

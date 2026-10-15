@@ -109,7 +109,6 @@ export const CreateHabitCompletionSlice: StateCreator<habitCompletionState> = (
   },
 
   upsertHabitCompletion: (completion) => {
-    console.log('[HabitCompletion] received from server:', completion);
     set((state) => {
       const existingIndex = state.habitCompletions.findIndex(
         (existing) =>

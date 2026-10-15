@@ -36,6 +36,13 @@ type CompletionFailedPayload = {
   code: string;
 };
 
+type DailyNoteOperationFailedPayload = {
+  operation: 'create' | 'update';
+  noteId?: string;
+  saveId?: number;
+  code: string;
+};
+
 export const CreateSocketSlice: StateCreator<
   CadenceAppStore,
   [],
@@ -57,20 +64,12 @@ export const CreateSocketSlice: StateCreator<
       autoConnect: false,
       withCredentials: true,
 
-      // IMPORTANT:
-      // The backend expects:
-      // socket.handshake.auth.authorization
-      //
-      // and expects it to be:
-      // "Bearer <token>"
       auth: {
         authorization: `Bearer ${token}`,
       },
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] connected:', socket.id);
-
       set({
         isSocketConnected: true,
         isSocketConnecting: false,
@@ -87,8 +86,6 @@ export const CreateSocketSlice: StateCreator<
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[Socket] disconnected:', reason);
-
       set({
         isSocketConnected: false,
         isSocketConnecting: false,
@@ -96,40 +93,26 @@ export const CreateSocketSlice: StateCreator<
     });
 
     socket.on('item:normal:completed', ({ item }: NormalCompletedPayload) => {
-      console.log('[Socket] item:normal:completed received:', item);
-
       get().updateNormalItem(item);
 
       get().clearItemCompletionPending(item.id);
     });
 
     socket.on('item:task:completed', ({ item }: TaskCompletedPayload) => {
-      console.log('[Socket] item:task:completed received:', item);
-
       get().updateTaskItem(item);
 
       get().clearItemCompletionPending(item.id);
     });
 
-    /*
-     * Habit completion confirmed by the server.
-     */
     socket.on(
       'item:habit:completed',
       ({ completion }: HabitCompletedPayload) => {
-        console.log('[Socket] item:habit:completed received:', completion);
-
-        // Put the persisted completion into the habit completion array.
         get().upsertHabitCompletion(completion);
 
-        // The server has confirmed this item's completion.
         get().clearItemCompletionPending(completion.itemId);
       },
     );
 
-    /*
-     * Completion failed on the server.
-     */
     socket.on(
       'item:completion:failed',
       ({ itemId, code }: CompletionFailedPayload) => {
@@ -138,8 +121,41 @@ export const CreateSocketSlice: StateCreator<
           code,
         });
 
-        // Stop the loading state even though the request failed.
         get().clearItemCompletionPending(itemId);
+      },
+    );
+
+    /*
+     * ------------------------------------------------------------------------
+     * DAILY NOTES
+     * ------------------------------------------------------------------------
+     *
+     * Creation is intentionally NOT done over Socket.IO.
+     *
+     * AppBootstrap creates the current Daily Note over HTTP if it does not
+     * already exist.
+     *
+     * Socket.IO is only responsible for persisting note content changes.
+     * The server answers with a minimal `daily-note:saved` acknowledgement
+     * ({ noteId, saveId }) that is consumed by `useDailyNoteAutosave`; it is
+     * deliberately NOT written into this store, because the editor owns the
+     * live document while the user is typing.
+     */
+
+    socket.on(
+      'daily-note:operation:failed',
+      ({ operation, noteId, saveId, code }: DailyNoteOperationFailedPayload) => {
+        console.error('[Socket] daily-note:operation:failed:', {
+          operation,
+          noteId,
+          saveId,
+          code,
+        });
+
+        /*
+         * Save status and retries are handled by `useDailyNoteAutosave`,
+         * which also listens to this event. The local content is retained.
+         */
       },
     );
 
@@ -187,12 +203,8 @@ export const CreateSocketSlice: StateCreator<
       return;
     }
 
-    console.log('[Socket] item:complete:', itemId);
-
-    // Show loading state in the UI.
     get().markItemCompletionPending(itemId);
 
-    // Send completion request to backend.
     socket.emit('item:complete', {
       itemId,
     });

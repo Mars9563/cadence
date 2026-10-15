@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import {
   useSetCadenceDayEnd,
   useSetCurrentDateTime,
   useUser,
 } from '@/store/selectors';
+
 import { getCadenceDayEnd } from '@/lib/cadenceDay';
 
 export function ClockUpdater() {
@@ -26,11 +28,40 @@ export function ClockUpdater() {
       setCadenceDayEnd(getCadenceDayEnd(now, user.dayEndTime));
     };
 
+    // Initial update immediately.
     updateClock();
 
-    const interval = setInterval(updateClock, 1000);
+    /*
+     * Wait until the next minute boundary.
+     *
+     * Example:
+     * 22:31:42.500
+     *
+     * waits ~17.5 seconds
+     *
+     * then updates at:
+     * 22:32:00
+     */
+    const now = new Date();
 
-    return () => clearInterval(interval);
+    const millisecondsUntilNextMinute =
+      60_000 - (now.getSeconds() * 1_000 + now.getMilliseconds());
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const timeout = setTimeout(() => {
+      updateClock();
+
+      interval = setInterval(updateClock, 60_000);
+    }, millisecondsUntilNextMinute);
+
+    return () => {
+      clearTimeout(timeout);
+
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [user?.dayEndTime, setCurrentTime, setCadenceDayEnd]);
 
   return null;

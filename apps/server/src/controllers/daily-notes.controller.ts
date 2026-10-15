@@ -104,13 +104,17 @@ export async function updateDailyNote(req: Request, res: Response) {
       });
     }
 
-    const dailyNote = await updateDailyNoteById(
+    /*
+     * Acknowledge only: `{ success: true, data: { noteId } }`.
+     * The saved document is never echoed back.
+     */
+    const result = await updateDailyNoteById(
       paramsResult.data.id,
       bodyResult.data.content,
       req.userJWT,
     );
 
-    return res.status(200).json(dailyNote);
+    return res.status(200).json(result);
   } catch (error) {
     console.error('Update daily note controller error:', error);
 

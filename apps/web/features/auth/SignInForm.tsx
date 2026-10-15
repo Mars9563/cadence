@@ -88,7 +88,6 @@ export function SignInForm() {
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     });
-    console.log('OAuth URL:', data?.url);
 
     if (error) {
       setAuthError(error.message);

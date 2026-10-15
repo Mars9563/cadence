@@ -1,0 +1,218 @@
+'use client';
+
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MDXEditor,
+  headingsPlugin,
+  listsPlugin,
+  linkPlugin,
+  linkDialogPlugin,
+  quotePlugin,
+  thematicBreakPlugin,
+  codeBlockPlugin,
+  markdownShortcutPlugin,
+  toolbarPlugin,
+  UndoRedo,
+  BoldItalicUnderlineToggles,
+  CreateLink,
+  BlockTypeSelect,
+  ListsToggle,
+  Separator,
+} from '@mdxeditor/editor';
+import type { MDXEditorMethods } from '@mdxeditor/editor';
+
+import '@mdxeditor/editor/style.css';
+import './dailyNote.css';
+
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  useDailyNotes,
+  useIsSocketConnected,
+  useSetDailyNoteContent,
+  useSocket,
+} from '@/store/selectors';
+
+import { DailyNoteSaveIndicator } from './DailyNoteSaveIndicator';
+import { useDailyNoteAutosave } from '@/hooks/useDailyNoteAutosave';
+
+type DailyNoteEditorProps = {
+  noteId: string;
+  noteDate: string;
+
+  /**
+   * Only read on mount. The editor owns the live document from then on, so
+   * later changes to this prop (which happen on every keystroke, because
+   * edits are mirrored into the store) are intentionally ignored.
+   */
+  initialContent: string;
+};
+
+/**
+ * After focusing at the very end of the document, bring that end into view.
+ * Lexical focuses with `preventScroll`, so for a long note the caret would
+ * otherwise sit below the fold.
+ */
+function scrollCaretIntoView() {
+  const viewport = document.activeElement?.closest<HTMLElement>(
+    '[data-slot="scroll-area-viewport"]',
+  );
+
+  if (viewport) {
+    viewport.scrollTop = viewport.scrollHeight;
+  }
+}
+
+/**
+ * One mounted editor == one Daily Note. The parent keys this component by
+ * note id, so switching notes (or returning to the tab) starts a fresh
+ * editor from that note's Markdown instead of poking `setMarkdown` into a
+ * live one, which would reset the selection and re-fire `onChange`.
+ */
+const DailyNoteEditor = memo(
+  function DailyNoteEditor({
+    noteId,
+    noteDate,
+    initialContent: initialContentProp,
+  }: DailyNoteEditorProps) {
+    const socket = useSocket();
+    const isSocketConnected = useIsSocketConnected();
+    const setDailyNoteContent = useSetDailyNoteContent();
+
+    const editorRef = useRef<MDXEditorMethods>(null);
+
+    const [initialContent] = useState(initialContentProp);
+
+    const autosave = useDailyNoteAutosave({
+      noteId,
+      initialContent,
+      socket,
+      isSocketConnected,
+      setStoreContent: setDailyNoteContent,
+    });
+
+    /*
+     * Focus once, after the editor has mounted, with the caret at the end of
+     * the document (or in the empty paragraph of an empty one).
+     *
+     * This runs exactly once per mount and never again, so it cannot steal
+     * focus back from another control after the user deliberately leaves the
+     * editor. It only moves the selection; it does not edit the document, so
+     * it triggers no `onChange` and no autosave.
+     *
+     * The timer matches how MDXEditor schedules its own `autoFocus`, and is
+     * cleared on unmount (including React StrictMode's simulated unmount).
+     */
+    useEffect(() => {
+      const timer = window.setTimeout(() => {
+        editorRef.current?.focus(scrollCaretIntoView, {
+          defaultSelection: 'rootEnd',
+        });
+      }, 0);
+
+      return () => window.clearTimeout(timer);
+    }, []);
+
+    const plugins = useMemo(
+      () => [
+        headingsPlugin(),
+        listsPlugin(),
+        linkPlugin(),
+        linkDialogPlugin(),
+        quotePlugin(),
+        thematicBreakPlugin(),
+        codeBlockPlugin(),
+        markdownShortcutPlugin(),
+        toolbarPlugin({
+          toolbarClassName: 'daily-note-toolbar',
+          toolbarContents: () => (
+            <>
+              <BlockTypeSelect />
+              <Separator />
+              <BoldItalicUnderlineToggles />
+              <Separator />
+              <ListsToggle />
+              <CreateLink />
+              <Separator />
+              <UndoRedo />
+            </>
+          ),
+        }),
+      ],
+      [],
+    );
+
+    return (
+      <section className="daily-note-shell">
+        <header className="daily-note-header">
+          <div className="daily-note-heading">
+            <div className="daily-note-kicker">
+              <span className="daily-note-kicker-dot" aria-hidden="true" />
+              Journal
+            </div>
+            <h1>Daily Note</h1>
+            <p>{noteDate}</p>
+          </div>
+
+          <DailyNoteSaveIndicator
+            status={autosave.status}
+            error={autosave.error}
+          />
+        </header>
+
+        {/*
+         * The ScrollArea viewport is the ONLY scroll container. The editor
+         * (toolbar + editable surface) is its content: the toolbar is
+         * `position: sticky` so it stays visible, and the editable element
+         * itself grows to fill the viewport, so the whole canvas is the
+         * document.
+         */}
+        <ScrollArea className="daily-note-scroll">
+          <MDXEditor
+            ref={editorRef}
+            markdown={initialContent}
+            onChange={autosave.onChange}
+            plugins={plugins}
+            className="daily-note-editor"
+            contentEditableClassName="daily-note-content"
+          />
+        </ScrollArea>
+      </section>
+    );
+  },
+  // Re-render only when the note itself changes, not on every keystroke.
+  (prev, next) =>
+    prev.noteId === next.noteId && prev.noteDate === next.noteDate,
+);
+
+export function DailyNote() {
+  const dailyNotes = useDailyNotes();
+
+  /*
+   * The Daily Notes store is already ordered by noteDate.
+   *
+   * For now the first note is today's/current Cadence note.
+   */
+  const activeNote = dailyNotes[0] ?? null;
+
+  /*
+   * Daily Notes are still loading.
+   */
+  if (!activeNote) {
+    return (
+      <section className="daily-note-shell">
+        <div className="daily-note-loading">
+          <p>Your daily note is still loading…</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <DailyNoteEditor
+      key={activeNote.id}
+      noteId={activeNote.id}
+      noteDate={activeNote.noteDate}
+      initialContent={activeNote.content}
+    />
+  );
+}
