@@ -14,10 +14,9 @@ import {
 import { SignOutButton } from '@/features/auth/SignOutButton';
 import { SignOutDialog } from '@/features/auth/SignOutDialog';
 
+import { LayoutDashboard, LogOut, NotebookText } from 'lucide-react';
 import {
   MdDashboard,
-  MdEventNote,
-  MdLogout,
   MdNotes,
   MdSettings,
   MdSpaceDashboard,
@@ -64,9 +63,14 @@ function RailButton({
             variant="ghost"
             size="icon"
             aria-label={label}
+            aria-current={active ? 'page' : undefined}
             className={cn(
-              'size-10 rounded-xl',
-              active && 'bg-muted text-foreground shadow-sm',
+              'text-muted-foreground relative size-9 rounded-md',
+              'hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground',
+              'transition-colors duration-(--cd-duration-fast)',
+              /* Active: filled, plus a short accent bar on the rail edge. */
+              active &&
+                'bg-fill-selected text-foreground hover:bg-fill-selected dark:hover:bg-fill-selected before:bg-primary before:absolute before:top-1/2 before:-left-2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full',
             )}
             onClick={onClick}
           />
@@ -87,22 +91,25 @@ function CollapsedSidebar() {
 
   return (
     <>
-      <aside className="bg-card flex w-16 shrink-0 flex-col items-center rounded-2xl border py-3 shadow-sm">
-        {/* Brand */}
-        <div className="border-b pb-3">
-          <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl shadow-sm">
-            <MdSpaceDashboard size={21} />
+      <aside className="bg-sidebar flex w-13 shrink-0 flex-col items-center border-r border-border/70 pb-2">
+        {/* Brand, in the shared top band. */}
+        <div className="flex h-(--cd-band-height) shrink-0 items-center">
+          <div
+            aria-hidden="true"
+            className="bg-surface-raised text-primary flex size-7 items-center justify-center rounded-md"
+          >
+            <MdSpaceDashboard size={16} />
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-3 flex flex-col gap-1.5" aria-label="Primary">
+        <nav className="mt-2 flex flex-col gap-1" aria-label="Primary">
           <RailButton
             label="Dashboard"
             active={viewMode === 'Dashboard'}
             onClick={() => setViewMode('Dashboard')}
           >
-            <MdDashboard size={18} />
+            <LayoutDashboard className="size-[18px]" />
           </RailButton>
 
           <RailButton
@@ -110,14 +117,14 @@ function CollapsedSidebar() {
             active={viewMode === 'Notes'}
             onClick={() => setViewMode('Notes')}
           >
-            <MdNotes size={18} />
+            <NotebookText className="size-[18px]" />
           </RailButton>
         </nav>
 
         {/* Bottom area */}
-        <div className="mt-auto border-t pt-3">
-          <RailButton label="Logout" onClick={() => setSignOutModalOpen(true)}>
-            <MdLogout size={20} />
+        <div className="mt-auto">
+          <RailButton label="Sign out" onClick={() => setSignOutModalOpen(true)}>
+            <LogOut className="size-[18px]" />
           </RailButton>
         </div>
       </aside>

@@ -24,7 +24,7 @@ export function NoteTabBar() {
     <div
       role="tablist"
       aria-label="Open notes"
-      className="bg-card flex h-11 shrink-0 items-end gap-1 overflow-x-auto overflow-y-hidden border-b px-2 [scrollbar-width:thin]"
+      className="bg-sidebar flex h-(--cd-band-height) shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-border/70 px-2 [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--cd-border-subtle)_transparent]"
     >
       {tabs.map((tab) => (
         <NoteTabButton key={tab.noteId} tab={tab} />
@@ -73,13 +73,20 @@ function NoteTabButton({ tab }: { tab: NoteTab }) {
         }
       }}
       className={cn(
-        'group flex h-9 max-w-52 min-w-28 shrink-0 cursor-pointer items-center gap-2 rounded-t-lg border border-b-0 px-3 text-sm transition-colors select-none',
+        'group flex h-7 max-w-56 min-w-24 shrink-0 cursor-pointer items-center gap-2 rounded-md pr-1 pl-2.5 text-(length:--cd-text-ui) transition-colors duration-(--cd-duration-fast) outline-none select-none',
+        'focus-visible:ring-primary/60 focus-visible:ring-1',
         isActive
-          ? 'bg-background text-foreground border-border'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground border-transparent',
+          ? 'bg-fill-selected text-foreground'
+          : 'text-muted-foreground hover:bg-fill-hover hover:text-foreground',
       )}
     >
-      <FileText className="size-3.5 shrink-0" />
+      <FileText
+        aria-hidden="true"
+        className={cn(
+          'size-3.5 shrink-0',
+          isActive ? 'text-muted-foreground' : 'text-faint-foreground',
+        )}
+      />
 
       <span className="min-w-0 flex-1 truncate">{title}</span>
 
@@ -91,11 +98,12 @@ function NoteTabButton({ tab }: { tab: NoteTab }) {
           closeNoteTab(tab.noteId);
         }}
         className={cn(
-          'hover:bg-muted flex size-5 shrink-0 items-center justify-center rounded-md',
+          'text-muted-foreground hover:bg-fill-selected hover:text-foreground flex size-5 shrink-0 items-center justify-center rounded-sm outline-none',
+          'focus-visible:ring-primary/60 focus-visible:ring-1 focus-visible:opacity-100',
           isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
         )}
       >
-        <X className="size-3.5" />
+        <X aria-hidden="true" className="size-3.5" />
       </button>
     </div>
   );

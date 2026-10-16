@@ -1,6 +1,6 @@
 'use client';
 
-import { SquarePen } from 'lucide-react';
+import { FilePlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useActiveNoteId, useNoteTabs } from '@/store/selectors';
@@ -20,7 +20,10 @@ export function NotesWorkspace() {
   const activeNoteId = useActiveNoteId();
 
   return (
-    <section className="bg-card flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border shadow-sm">
+    <section
+      aria-label="Editor"
+      className="bg-background flex h-full min-w-0 flex-col overflow-hidden"
+    >
       {tabs.length === 0 ? (
         <EmptyWorkspace />
       ) : (
@@ -54,13 +57,23 @@ function EmptyWorkspace() {
   const { createNoteIn } = useNoteTree();
 
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
+      <div className="space-y-1.5">
+        <h2 className="text-foreground font-serif text-xl font-medium">
+          No note open
+        </h2>
+        <p className="text-muted-foreground text-(length:--cd-text-ui)">
+          Open a note from the sidebar, or start a new one.
+        </p>
+      </div>
+
       <Button
         variant="outline"
-        className="rounded-xl"
+        size="sm"
+        className="text-(length:--cd-text-ui)"
         onClick={() => void createNoteIn(null)}
       >
-        <SquarePen />
+        <FilePlus />
         New note
       </Button>
     </div>

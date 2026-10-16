@@ -31,8 +31,12 @@ import {
 import { useNoteTree } from '../NoteTreeContext';
 import { NoteTreeRow } from './NoteTreeRow';
 
-const ROW_HEIGHT = 32;
-const INDENT = 16;
+/*
+ * 30px rows. The indent equals the chevron column plus its gap (16 + 4), so
+ * a child's chevron sits directly under its parent's folder icon.
+ */
+const ROW_HEIGHT = 30;
+const INDENT = 20;
 
 const NEW_FOLDER_NAME = 'New folder';
 
@@ -214,22 +218,22 @@ export function FileSystemPanel() {
   };
 
   return (
-    <section className="bg-card flex h-full w-full flex-col rounded-2xl border shadow-sm">
-      {/* Header */}
-      <header className="flex items-center gap-1 border-b px-3 py-2.5">
-        <p className="text-muted-foreground flex-1 px-1 text-[10px] font-semibold tracking-[0.16em] uppercase">
+    <section
+      aria-label="Notes"
+      className="bg-sidebar flex h-full w-full flex-col"
+    >
+      {/* Header, in the shared top band. */}
+      <header className="flex h-(--cd-band-height) shrink-0 items-center gap-0.5 pr-2 pl-4">
+        <h2 className="text-foreground flex-1 text-(length:--cd-text-ui) font-medium">
           Notes
-        </p>
+        </h2>
 
         <HeaderButton label="New note" onClick={handleNewNoteClick}>
-          <FilePlus className="size-4" />
+          <FilePlus />
         </HeaderButton>
 
-        <HeaderButton
-          label="New folder"
-          onClick={handleNewFolderClick}
-        >
-          <FolderPlus className="size-4" />
+        <HeaderButton label="New folder" onClick={handleNewFolderClick}>
+          <FolderPlus />
         </HeaderButton>
       </header>
 
@@ -240,7 +244,7 @@ export function FileSystemPanel() {
        */}
       <div
         ref={treeContainerRef}
-        className="relative min-h-0 flex-1 px-1.5 py-2"
+        className="relative min-h-0 flex-1 px-2 pb-2"
         onKeyDownCapture={(event) => {
           if (event.key !== 'F2') return;
 
@@ -260,6 +264,13 @@ export function FileSystemPanel() {
             height={height}
             rowHeight={ROW_HEIGHT}
             indent={INDENT}
+            /*
+             * react-arborist gives every row an inline
+             * `min-width: max-content`, which lets long names widen the row
+             * (and the list) instead of truncating. Rows must fit the panel.
+             */
+            rowClassName="min-w-0! outline-none"
+            className="outline-none"
             openByDefault={false}
             disableMultiSelection
             selection={activeNoteId ?? undefined}
@@ -280,9 +291,26 @@ export function FileSystemPanel() {
         ) : null}
 
         {data.length === 0 && (
-          <p className="text-muted-foreground pointer-events-none absolute inset-x-0 top-0 px-6 py-8 text-center text-xs">
-            No notes yet. Create one with the buttons above.
-          </p>
+          <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-3 px-6 pt-10 text-center">
+            <div className="space-y-1">
+              <p className="text-foreground text-(length:--cd-text-ui) font-medium">
+                No notes yet
+              </p>
+              <p className="text-muted-foreground text-(length:--cd-text-meta) leading-relaxed">
+                Notes and folders you create appear here.
+              </p>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-(length:--cd-text-ui)"
+              onClick={handleNewNoteClick}
+            >
+              <FilePlus />
+              New note
+            </Button>
+          </div>
         )}
       </div>
     </section>
@@ -306,6 +334,7 @@ function HeaderButton({
             variant="ghost"
             size="icon-sm"
             aria-label={label}
+            className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground size-7 rounded-md"
             onClick={onClick}
           />
         }

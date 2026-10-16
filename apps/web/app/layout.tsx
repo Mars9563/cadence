@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, JetBrains_Mono, Literata } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/providers/theme-provider';
@@ -20,6 +20,14 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+// Reading serif for the note editor; variable, with optical sizing.
+const literata = Literata({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  axes: ['opsz'],
+  variable: '--font-literata',
+});
+
 export const metadata: Metadata = {
   title: 'Cadence',
   description: 'Your personal rhythm for getting things done.',
@@ -38,6 +46,7 @@ export default function RootLayout({
         geistSans.variable,
         geistMono.variable,
         jetbrainsMono.variable,
+        literata.variable,
         'antialiased',
       )}
     >

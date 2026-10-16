@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { toast } from 'sonner';
 
@@ -48,6 +48,33 @@ export function NoteTitle({ noteId, title, readOnly, onEnter }: NoteTitleProps) 
 
   // Set by Esc so the blur that follows does not save.
   const discardOnBlurRef = useRef(false);
+
+  /*
+   * TextareaAutosize measures on render, window resize and font load, but
+   * not when its own width changes. Inactive tabs mount hidden (zero width)
+   * and the tree divider can be dragged, so a long title would keep a stale
+   * height and clip. Re-render, and so re-measure, whenever the width changes.
+   */
+  const [, remeasure] = useReducer((count: number) => count + 1, 0);
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (!input) return;
+
+    let lastWidth = input.offsetWidth;
+
+    const observer = new ResizeObserver(() => {
+      if (input.offsetWidth === lastWidth) return;
+
+      lastWidth = input.offsetWidth;
+      remeasure();
+    });
+
+    observer.observe(input);
+
+    return () => observer.disconnect();
+  }, []);
 
   // "Create note -> type its name": focus and select once, then clear.
   useEffect(() => {

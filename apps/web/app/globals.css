@@ -2,7 +2,8 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@daypicker/react/style.css';
-@custom-variant dark (&:is(.dark *));
+/* The workspace surface is a dark surface: shadcn's dark: styles apply there. */
+@custom-variant dark (&:is(.dark *, [data-surface='workspace'] *));
 
 @theme inline {
   --color-background: var(--background);
@@ -10,6 +11,11 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-mono);
+  --font-serif: var(--font-literata);
+  --color-surface-raised: var(--surface-raised);
+  --color-fill-hover: var(--fill-hover);
+  --color-fill-selected: var(--fill-selected);
+  --color-faint-foreground: var(--faint-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -81,6 +87,138 @@
   --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
   --sidebar-border: oklch(0.925 0.005 214.3);
   --sidebar-ring: oklch(0.723 0.014 214.4);
+
+  /* Generic fallbacks for the Cadence semantic extras (any theme). */
+  --surface-raised: var(--popover);
+  --fill-hover: color-mix(in oklch, var(--foreground) 5%, transparent);
+  --fill-selected: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --faint-foreground: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
+}
+
+/* ==========================================================================
+   Cadence design tokens
+   Primitives for the quiet dark workspace. Screens opt in with
+   useSurface('workspace'), which maps shadcn's semantic tokens onto these
+   (see docs/design/workspace-redesign.md).
+   ========================================================================== */
+
+:root {
+  /* Palette */
+  --cd-background: #101112;
+  --cd-surface-sidebar: #161718;
+  --cd-surface-raised: #1d1f20;
+  --cd-border-subtle: #303234;
+  --cd-text-primary: #eae9e5;
+  --cd-text-secondary: #a4a49f;
+  --cd-text-tertiary: #71726d;
+  --cd-accent: #b8c5b0;
+  --cd-accent-soft: rgb(184 197 176 / 0.16);
+  --cd-fill-hover: rgb(234 233 229 / 0.05);
+  --cd-fill-selected: rgb(234 233 229 / 0.08);
+  --cd-danger: #e3907f;
+  --cd-warning: #d8bb80;
+
+  /* Type */
+  --cd-font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --cd-font-prose: var(--font-literata), ui-serif, Georgia, serif;
+  --cd-font-code: var(--font-mono), ui-monospace, monospace;
+  --cd-text-meta: 0.75rem; /* 12px: paths, shortcuts */
+  --cd-text-ui: 0.8125rem; /* 13px: rows, tabs */
+  --cd-text-control: 0.875rem; /* 14px: buttons, menus */
+  --cd-text-prose: 1.0625rem; /* 17px: note body */
+  --cd-text-title: 2.125rem; /* 34px: note title */
+
+  /* Shape and depth */
+  --cd-radius-sm: 4px;
+  --cd-radius-md: 6px;
+  --cd-radius-lg: 8px;
+  --cd-shadow-popover:
+    0 0 0 1px var(--cd-border-subtle), 0 12px 32px -8px rgb(0 0 0 / 0.6);
+
+  /* Layout */
+  --cd-band-height: 40px; /* shared top band of rail, tree and tabs */
+  --cd-measure: 680px; /* note column width */
+
+  /* Motion */
+  --cd-duration-fast: 120ms;
+  --cd-duration-base: 180ms;
+  --cd-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+html[data-surface='workspace'] {
+  color-scheme: dark !important;
+  font-family: var(--cd-font-ui);
+
+  --background: var(--cd-background);
+  --foreground: var(--cd-text-primary);
+  --card: var(--cd-surface-sidebar);
+  --card-foreground: var(--cd-text-primary);
+  --popover: var(--cd-surface-raised);
+  --popover-foreground: var(--cd-text-primary);
+  --primary: var(--cd-accent);
+  --primary-foreground: var(--cd-background);
+  --secondary: var(--cd-surface-raised);
+  --secondary-foreground: var(--cd-text-primary);
+  --muted: var(--cd-surface-raised);
+  --muted-foreground: var(--cd-text-secondary);
+  --accent: color-mix(in srgb, var(--cd-text-primary) 7%, var(--cd-surface-raised));
+  --accent-foreground: var(--cd-text-primary);
+  --destructive: var(--cd-danger);
+  --border: var(--cd-border-subtle);
+  --input: var(--cd-border-subtle);
+  --ring: var(--cd-accent);
+  --radius: 0.5rem;
+
+  --sidebar: var(--cd-surface-sidebar);
+  --sidebar-foreground: var(--cd-text-primary);
+  --sidebar-primary: var(--cd-accent);
+  --sidebar-primary-foreground: var(--cd-background);
+  --sidebar-accent: var(--cd-fill-selected);
+  --sidebar-accent-foreground: var(--cd-text-primary);
+  --sidebar-border: var(--cd-border-subtle);
+  --sidebar-ring: var(--cd-accent);
+
+  --surface-raised: var(--cd-surface-raised);
+  --fill-hover: var(--cd-fill-hover);
+  --fill-selected: var(--cd-fill-selected);
+  --faint-foreground: var(--cd-text-tertiary);
+}
+
+/*
+ * Thin, quiet scrollbars. In the base layer with zero specificity so that
+ * utilities and components that hide native scrollbars still win.
+ */
+@layer base {
+  :where(html[data-surface='workspace']) * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cd-border-subtle) transparent;
+  }
+}
+
+html[data-surface='workspace'] ::selection {
+  background: var(--cd-accent-soft);
+}
+
+/* Tooltips: raised and quiet instead of an inverted light chip. */
+html[data-surface='workspace'] [data-slot='tooltip-content'] {
+  background: var(--cd-surface-raised);
+  color: var(--cd-text-primary);
+  box-shadow: var(--cd-shadow-popover);
+  font-size: var(--cd-text-meta);
+}
+
+html[data-surface='workspace'] [data-slot='tooltip-content'] > div[data-side] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-surface='workspace'] *,
+  html[data-surface='workspace'] *::before,
+  html[data-surface='workspace'] *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .dark {

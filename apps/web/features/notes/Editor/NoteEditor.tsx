@@ -111,19 +111,29 @@ export function NoteEditor({ noteId }: { noteId: string }) {
 
   if (load.status === 'loading') {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Orb state="searching" size={28} label="Opening note" className="text-muted-foreground" />
+      <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 text-(length:--cd-text-ui)">
+        <Orb state="searching" size={24} label="Opening note" className="text-faint-foreground" />
+        <span aria-hidden="true">Opening note…</span>
       </div>
     );
   }
 
   if (load.status === 'error') {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-sm">
-        <p className="text-muted-foreground">{load.message}</p>
+      <div
+        role="alert"
+        className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center"
+      >
+        <div className="space-y-1">
+          <p className="text-foreground text-(length:--cd-text-control) font-medium">
+            This note didn’t open
+          </p>
+          <p className="text-muted-foreground text-(length:--cd-text-ui)">{load.message}</p>
+        </div>
         <Button
           variant="outline"
           size="sm"
+          className="text-(length:--cd-text-ui)"
           onClick={() => {
             setLoad({ status: 'loading' });
             setAttempt((value) => value + 1);
@@ -216,6 +226,7 @@ const NoteEditorBody = memo(
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground aria-pressed:bg-fill-selected aria-pressed:text-foreground size-7 rounded-md"
                   aria-pressed={readOnly}
                   aria-label={readOnly ? 'Switch to editing' : 'Switch to reading'}
                   onClick={() => toggleReadOnly(noteId)}
@@ -289,7 +300,7 @@ function NoteBreadcrumb({ noteId }: { noteId: string }) {
     <nav aria-label="Note location" className="note-breadcrumb">
       {path.map((name, index) => (
         <span key={index} className="note-breadcrumb-folder">
-          {name}
+          <span className="note-breadcrumb-name">{name}</span>
           <span aria-hidden="true">/</span>
         </span>
       ))}

@@ -17,8 +17,9 @@ type NoteSaveIndicatorProps = {
 
 /*
  * Same orb language as the Daily Note indicator, condensed: the orb alone
- * says the state (green resting = saved, spinning = saving, amber = unsaved,
- * red retrying = failed) and the words live in a tooltip. Only a failure
+ * says the state (accent resting = saved, spinning = saving, amber = unsaved,
+ * red retrying = failed) and the words live in a tooltip. Tones come from the
+ * workspace palette so the indicator stays as quiet as the chrome around it. Only a failure
  * also shows a short label, because it needs attention.
  */
 const LOOK = {
@@ -26,21 +27,21 @@ const LOOK = {
     state: 'base',
     speed: 0.5,
     paused: true,
-    tone: 'text-emerald-500',
+    tone: 'text-primary',
     label: 'Saved',
   },
   saving: {
     state: 'working',
     speed: 0.8,
     paused: false,
-    tone: 'text-muted-foreground',
+    tone: 'text-faint-foreground',
     label: 'Saving…',
   },
   dirty: {
     state: 'working',
     speed: 0.55,
     paused: true,
-    tone: 'text-amber-500',
+    tone: 'text-(--cd-warning)',
     label: 'Unsaved changes',
   },
   error: {
