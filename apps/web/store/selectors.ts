@@ -167,3 +167,75 @@ export const useSetDailyNoteContent = () =>
 
 export const useResetDailyNotes = () =>
   useCadenceStore((s) => s.resetDailyNotes);
+
+// notes (folders + notes) selectors ----
+
+export const useFolders = () => useCadenceStore((s) => s.folders);
+
+export const useNotes = () => useCadenceStore((s) => s.notes);
+
+export const useNotesStatus = () => useCadenceStore((s) => s.notesStatus);
+
+export const useNotesError = () => useCadenceStore((s) => s.notesError);
+
+export const useNotesReady = () =>
+  useCadenceStore((s) => s.notesStatus === 'ready');
+
+export const useFetchNotesTree = () =>
+  useCadenceStore((s) => s.fetchNotesTree);
+
+export const useUpsertFolder = () => useCadenceStore((s) => s.upsertFolder);
+
+export const useRemoveFolder = () => useCadenceStore((s) => s.removeFolder);
+
+export const useUpsertNote = () => useCadenceStore((s) => s.upsertNote);
+
+export const useRemoveNote = () => useCadenceStore((s) => s.removeNote);
+
+export const useResetNotes = () => useCadenceStore((s) => s.resetNotes);
+
+
+export const useCreateFolder = () => useCadenceStore((s) => s.createFolder);
+
+export const useCreateNote = () => useCadenceStore((s) => s.createNote);
+
+export const useUpdateFolder = () => useCadenceStore((s) => s.updateFolder);
+
+export const useUpdateNote = () => useCadenceStore((s) => s.updateNote);
+
+export const useDeleteFolder = () => useCadenceStore((s) => s.deleteFolder);
+
+export const useDeleteNote = () => useCadenceStore((s) => s.deleteNote);
+
+// note tabs selectors ----
+
+export const useNoteTabs = () => useCadenceStore((s) => s.noteTabs);
+
+export const useActiveNoteId = () => useCadenceStore((s) => s.activeNoteId);
+
+export const useNoteTab = (noteId: string) =>
+  useCadenceStore((s) => s.noteTabs.find((tab) => tab.noteId === noteId));
+
+export const useNoteSummary = (noteId: string) =>
+  useCadenceStore((s) => s.notes.find((note) => note.id === noteId));
+
+export const useOpenNoteTab = () => useCadenceStore((s) => s.openNoteTab);
+
+export const useCloseNoteTab = () => useCadenceStore((s) => s.closeNoteTab);
+
+export const useSetActiveNoteTab = () =>
+  useCadenceStore((s) => s.setActiveNoteTab);
+
+export const useToggleNoteTabReadOnly = () =>
+  useCadenceStore((s) => s.toggleNoteTabReadOnly);
+
+export const useSetNoteContent = () => useCadenceStore((s) => s.setNoteContent);
+
+export const useTitleFocusNoteId = () =>
+  useCadenceStore((s) => s.titleFocusNoteId);
+
+export const useClearTitleFocusRequest = () =>
+  useCadenceStore((s) => s.clearTitleFocusRequest);
+
+export const useRestoreNoteTabs = () =>
+  useCadenceStore((s) => s.restoreNoteTabs);

@@ -8,6 +8,8 @@ import { CreateItemSlice } from './slices/itemSlice';
 import { CreateDailyNoteSlice } from './slices/dailyNoteSlice';
 import { CreateSocketSlice } from './slices/socketSlice';
 import { CreateHabitCompletionSlice } from './slices/habitCompletionSlice';
+import { CreateNotesSlice } from './slices/notesSlice';
+import { CreateNoteTabsSlice } from './slices/noteTabsSlice';
 
 export const useCadenceStore = create<CadenceAppStore>()((...args) => ({
   ...CreateUiSlice(...args),
@@ -16,4 +18,6 @@ export const useCadenceStore = create<CadenceAppStore>()((...args) => ({
   ...CreateDailyNoteSlice(...args),
   ...CreateSocketSlice(...args),
   ...CreateHabitCompletionSlice(...args),
+  ...CreateNotesSlice(...args),
+  ...CreateNoteTabsSlice(...args),
 }));

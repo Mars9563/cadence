@@ -13,6 +13,7 @@ import {
   useFetchDailyNotes,
   useFetchHabitCompletions,
   useFetchItems,
+  useFetchNotesTree,
   useHabitCompletionsStatus,
   useIsSocketConnected,
   useItemsStatus,
@@ -21,6 +22,7 @@ import {
   useSetUser,
   useUser,
   useDailyNotesStatus,
+  useNotesStatus,
 } from '@/store/selectors';
 import { LoadingScreen } from './LoadingScreen/loadingScreen';
 
@@ -89,6 +91,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
   const itemsStatus = useItemsStatus();
   const habitCompletionsStatus = useHabitCompletionsStatus();
   const dailyNotesStatus = useDailyNotesStatus();
+  const notesStatus = useNotesStatus();
 
   const isSocketConnected = useIsSocketConnected();
 
@@ -101,6 +104,8 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
   const fetchDailyNotes = useFetchDailyNotes();
   const ensureTodayDailyNote = useEnsureTodayDailyNote();
+
+  const fetchNotesTree = useFetchNotesTree();
 
   const connectSocket = useConnectSocket();
   const disconnectSocket = useDisconnectSocket();
@@ -155,6 +160,9 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     void fetchItems();
     void fetchHabitCompletions();
 
+    // Load folders + note summaries (no note content).
+    void fetchNotesTree();
+
     // Load profile + Daily Notes.
     void loadProfile();
 
@@ -173,6 +181,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     fetchHabitCompletions,
     fetchDailyNotes,
     ensureTodayDailyNote,
+    fetchNotesTree,
     connectSocket,
     disconnectSocket,
   ]);
@@ -186,6 +195,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     itemsStatus === 'ready' &&
     habitCompletionsStatus === 'ready' &&
     dailyNotesStatus === 'ready' &&
+    notesStatus === 'ready' &&
     isSocketConnected;
 
   if (!isAppReady) {

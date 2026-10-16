@@ -45,3 +45,22 @@ export type Note = {
   createdAt: string;
   updatedAt: string;
 };
+
+/**
+ * A Note without its Markdown content.
+ *
+ * Returned by list/rename/move operations so the notes tree can be loaded
+ * without transferring every document. Content is fetched per note on open.
+ */
+export type NoteSummary = Omit<Note, 'content'>;
+
+/**
+ * Acknowledgement for a persisted Note content update.
+ *
+ * Same contract as `DailyNoteSaveAck`: no content or timestamps are echoed
+ * back, and `saveId` matches the ack to the client's save attempt.
+ */
+export type NoteSaveAck = {
+  noteId: string;
+  saveId: number;
+};

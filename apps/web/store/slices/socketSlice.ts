@@ -3,9 +3,18 @@ import { StateCreator } from 'zustand';
 
 import type { HabitCompletion, NormalItem, TaskItem } from '@cadence/types';
 
+import { createClient } from '@/lib/supabase/client';
+import { getAccessToken } from '@/lib/supabase/accessToken';
+
 import type { CadenceAppStore } from '../types';
 
 const SOCKET_URL = process.env.PUBLIC_BACKEND_URL ?? 'http://localhost:4000';
+
+/**
+ * Supabase auth listener that forwards refreshed tokens to the socket.
+ * Lives outside the store: it is not state, just a handle to clean up.
+ */
+let authSubscription: { unsubscribe: () => void } | null = null;
 
 export interface socketState {
   socket: Socket | null;
@@ -64,9 +73,41 @@ export const CreateSocketSlice: StateCreator<
       autoConnect: false,
       withCredentials: true,
 
-      auth: {
-        authorization: `Bearer ${token}`,
+      /*
+       * A function, not a fixed object: Socket.IO calls it for EVERY
+       * handshake, so a reconnect (network drop, laptop sleep) presents the
+       * current token instead of the one from the first connection, which
+       * may have expired since.
+       */
+      auth: (callback) => {
+        void getAccessToken().then((freshToken) => {
+          callback({ authorization: `Bearer ${freshToken ?? token}` });
+        });
       },
+    });
+
+    /*
+     * The server keeps the token from the handshake and uses it for every
+     * write on this socket. Access tokens expire (~1h) while the socket
+     * stays open, so each time Supabase refreshes the session the new token
+     * is handed to the server. Without this, all socket writes start
+     * failing with `JWT expired` an hour after connecting.
+     */
+    authSubscription?.unsubscribe();
+    authSubscription = createClient().auth.onAuthStateChange(
+      (event, session) => {
+        if (event !== 'TOKEN_REFRESHED' || !session) return;
+
+        if (socket.connected) {
+          socket.emit('auth:refresh', {
+            authorization: `Bearer ${session.access_token}`,
+          });
+        }
+      },
+    ).data.subscription;
+
+    socket.on('auth:refresh:failed', ({ code }: { code: string }) => {
+      console.error('[Socket] auth:refresh:failed:', code);
     });
 
     socket.on('connect', () => {
@@ -175,6 +216,9 @@ export const CreateSocketSlice: StateCreator<
     if (!socket) {
       return;
     }
+
+    authSubscription?.unsubscribe();
+    authSubscription = null;
 
     socket.removeAllListeners();
     socket.disconnect();

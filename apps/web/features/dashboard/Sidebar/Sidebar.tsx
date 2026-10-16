@@ -1,8 +1,15 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { SignOutButton } from '@/features/auth/SignOutButton';
 import { SignOutDialog } from '@/features/auth/SignOutDialog';
@@ -10,14 +17,117 @@ import { SignOutDialog } from '@/features/auth/SignOutDialog';
 import {
   MdDashboard,
   MdEventNote,
+  MdLogout,
   MdNotes,
   MdSettings,
   MdSpaceDashboard,
 } from 'react-icons/md';
 
-import { useSetViewMode, useViewMode } from '@/store/selectors';
+import {
+  useSetSignOutModalOpen,
+  useSetViewMode,
+  useViewMode,
+} from '@/store/selectors';
 
-export function Sidebar() {
+interface SidebarProps {
+  /**
+   * Icon-only rail (used by the Notes view, where the file-system column
+   * needs the width). Labels move into tooltips.
+   */
+  collapsed?: boolean;
+}
+
+export function Sidebar({ collapsed = false }: SidebarProps) {
+  if (collapsed) {
+    return <CollapsedSidebar />;
+  }
+
+  return <ExpandedSidebar />;
+}
+
+function RailButton({
+  label,
+  active = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={label}
+            className={cn(
+              'size-10 rounded-xl',
+              active && 'bg-muted text-foreground shadow-sm',
+            )}
+            onClick={onClick}
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function CollapsedSidebar() {
+  const viewMode = useViewMode();
+  const setViewMode = useSetViewMode();
+  const setSignOutModalOpen = useSetSignOutModalOpen();
+
+  return (
+    <>
+      <aside className="bg-card flex w-16 shrink-0 flex-col items-center rounded-2xl border py-3 shadow-sm">
+        {/* Brand */}
+        <div className="border-b pb-3">
+          <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl shadow-sm">
+            <MdSpaceDashboard size={21} />
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="mt-3 flex flex-col gap-1.5" aria-label="Primary">
+          <RailButton
+            label="Dashboard"
+            active={viewMode === 'Dashboard'}
+            onClick={() => setViewMode('Dashboard')}
+          >
+            <MdDashboard size={18} />
+          </RailButton>
+
+          <RailButton
+            label="Notes"
+            active={viewMode === 'Notes'}
+            onClick={() => setViewMode('Notes')}
+          >
+            <MdNotes size={18} />
+          </RailButton>
+        </nav>
+
+        {/* Bottom area */}
+        <div className="mt-auto border-t pt-3">
+          <RailButton label="Logout" onClick={() => setSignOutModalOpen(true)}>
+            <MdLogout size={20} />
+          </RailButton>
+        </div>
+      </aside>
+
+      <SignOutDialog />
+    </>
+  );
+}
+
+function ExpandedSidebar() {
   const viewMode = useViewMode();
   const setViewMode = useSetViewMode();
 

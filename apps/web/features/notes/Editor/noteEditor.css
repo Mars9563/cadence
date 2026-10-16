@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Note editor — builds on the Daily Note writing surface (dailyNote.css).
+
+   The MDXEditor gets the `daily-note-editor` / `daily-note-content` classes,
+   so toolbar, typography and canvas sizing are shared. These rules only add
+   what notes have and daily notes do not: the header row, the inline title
+   and reading mode.
+   ========================================================================== */
+
+.note-editor-pane {
+  /* Variables the shared Daily Note rules read. */
+  --daily-note-panel: var(--card);
+  --daily-note-canvas: var(--background);
+  --daily-note-toolbar: color-mix(in oklch, var(--card) 92%, var(--background));
+
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--daily-note-canvas);
+}
+
+/* --------------------------------------------------------------------------
+   Header row: path + actions
+   -------------------------------------------------------------------------- */
+
+.note-editor-header {
+  display: flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  background: var(--daily-note-panel);
+}
+
+.note-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.note-breadcrumb-folder {
+  display: inline-flex;
+  flex-shrink: 1;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-breadcrumb-current {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+}
+
+.note-editor-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   Inline title — same readable column as the document body
+   -------------------------------------------------------------------------- */
+
+.note-title-block {
+  padding: 2.25rem max(1.25rem, calc((100% - 820px) / 2)) 0.25rem;
+  background: var(--daily-note-canvas);
+}
+
+.note-inline-title {
+  display: block;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--foreground);
+  caret-color: var(--primary);
+
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.note-inline-title::placeholder {
+  color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
+}
+
+.note-inline-title::selection {
+  background: color-mix(in oklch, var(--primary) 28%, transparent);
+}
+
+/* The title sits above the toolbar, so the body needs less top room. */
+.note-editor .daily-note-content {
+  padding-top: 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Reading mode: no formatting toolbar, no caret affordances
+   -------------------------------------------------------------------------- */
+
+.is-read-only .note-editor .mdxeditor-toolbar {
+  display: none;
+}
+
+.is-read-only .note-inline-title {
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .note-title-block {
+    padding: 1.75rem 1.2rem 0.25rem;
+  }
+}

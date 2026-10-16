@@ -20,11 +20,19 @@ import {
   Separator,
 } from '@mdxeditor/editor';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
+import { BookOpen, PencilLine } from 'lucide-react';
 
 import '@mdxeditor/editor/style.css';
 import './dailyNote.css';
 
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import {
   useDailyNotes,
   useIsSocketConnected,
@@ -81,6 +89,9 @@ const DailyNoteEditor = memo(
     const editorRef = useRef<MDXEditorMethods>(null);
 
     const [initialContent] = useState(initialContentProp);
+
+    // Reading mode guards against accidental edits. Not persisted.
+    const [readOnly, setReadOnly] = useState(false);
 
     const autosave = useDailyNoteAutosave({
       noteId,
@@ -142,7 +153,7 @@ const DailyNoteEditor = memo(
     );
 
     return (
-      <section className="daily-note-shell">
+      <section className={cn('daily-note-shell', readOnly && 'is-read-only')}>
         <header className="daily-note-header">
           <div className="daily-note-heading">
             <div className="daily-note-kicker">
@@ -153,10 +164,34 @@ const DailyNoteEditor = memo(
             <p>{noteDate}</p>
           </div>
 
-          <DailyNoteSaveIndicator
-            status={autosave.status}
-            error={autosave.error}
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            <DailyNoteSaveIndicator
+              status={autosave.status}
+              error={autosave.error}
+            />
+
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-pressed={readOnly}
+                    aria-label={
+                      readOnly ? 'Switch to editing' : 'Switch to reading'
+                    }
+                    onClick={() => setReadOnly((value) => !value)}
+                  />
+                }
+              >
+                {readOnly ? <PencilLine /> : <BookOpen />}
+              </TooltipTrigger>
+
+              <TooltipContent side="bottom">
+                {readOnly ? 'Edit' : 'Reading view'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </header>
 
         {/*
@@ -172,6 +207,7 @@ const DailyNoteEditor = memo(
             markdown={initialContent}
             onChange={autosave.onChange}
             plugins={plugins}
+            readOnly={readOnly}
             className="daily-note-editor"
             contentEditableClassName="daily-note-content"
           />
