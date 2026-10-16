@@ -1,5 +1,5 @@
 import { Orb } from '@yogesharc/thinking-orbs';
-import { MdLock } from 'react-icons/md';
+import { Lock } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -35,22 +35,27 @@ export function ItemRowLayout({
   return (
     <div
       className={cn(
-        'group flex min-h-16 items-center gap-3 px-4 py-3.5',
-        'transition-colors',
-        !locked && 'hover:bg-muted/35',
-        locked && 'bg-muted/10',
+        'group -mx-2 flex min-h-13 items-center gap-3 rounded-md px-2 py-2.5',
+        'transition-colors duration-(--cd-duration-fast)',
+        !locked && 'hover:bg-fill-hover',
       )}
     >
       <div className="flex size-5 shrink-0 items-center justify-center">
         {loading ? (
-          <Orb state="reasoning" size={20} label="Completing" />
+          <Orb
+            state="reasoning"
+            size={18}
+            label="Completing"
+            className="text-primary"
+          />
         ) : locked ? (
           <div
-            className="text-muted-foreground flex size-5 items-center justify-center"
+            className="text-faint-foreground flex size-5 items-center justify-center"
+            role="img"
             aria-label="Locked"
             title="Locked"
           >
-            <MdLock size={17} />
+            <Lock aria-hidden="true" className="size-3.5" />
           </div>
         ) : (
           <Checkbox
@@ -58,6 +63,8 @@ export function ItemRowLayout({
             disabled={!onCheckedChange}
             onCheckedChange={onCheckedChange}
             aria-label={title}
+            // The default input border is too faint to find on the canvas.
+            className="border-faint-foreground group-hover:border-muted-foreground"
           />
         )}
       </div>
@@ -66,8 +73,9 @@ export function ItemRowLayout({
         <p
           title={title}
           className={cn(
-            'truncate text-sm font-medium',
-            checked && 'text-muted-foreground line-through',
+            'text-foreground truncate text-(length:--cd-text-control)',
+            checked &&
+              'text-muted-foreground decoration-faint-foreground line-through',
             locked && 'text-muted-foreground',
           )}
         >
@@ -75,14 +83,14 @@ export function ItemRowLayout({
         </p>
 
         {description ? (
-          <p className="text-muted-foreground mt-0.5 truncate text-xs">
+          <p className="text-muted-foreground mt-0.5 truncate text-(length:--cd-text-meta)">
             {description}
           </p>
         ) : null}
       </div>
 
       {meta.length > 0 ? (
-        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-[10px] sm:gap-3 sm:text-xs">
+        <div className="text-muted-foreground flex shrink-0 items-center gap-3 text-(length:--cd-text-meta)">
           {meta.map((part, index) => (
             <span key={index} className="whitespace-nowrap tabular-nums">
               {part}

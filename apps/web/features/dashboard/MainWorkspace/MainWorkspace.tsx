@@ -1,7 +1,8 @@
 'use client';
 
+import { History } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 import { useCadenceToday } from '@/hooks/useCadenceToday';
 
@@ -34,43 +35,43 @@ export function MainWorkspace() {
 
   if (status === 'error') {
     return (
-      <section className="min-w-0 overflow-y-auto pr-1">
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3 p-6">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Your items didn&apos;t load
-              </h2>
+      <section role="alert" className="flex min-w-0 flex-col items-start gap-4 py-2">
+        <div className="space-y-1">
+          <h2 className="text-foreground text-(length:--cd-text-control) font-medium">
+            Your items didn&apos;t load
+          </h2>
 
-              <p className="text-muted-foreground text-sm">{error}</p>
-            </div>
+          <p className="text-muted-foreground text-(length:--cd-text-ui)">{error}</p>
+        </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void fetchItems()}
-            >
-              Try again
-            </Button>
-          </CardContent>
-        </Card>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-(length:--cd-text-ui)"
+          onClick={() => void fetchItems()}
+        >
+          Try again
+        </Button>
       </section>
     );
   }
 
   return (
-    <section className="min-w-0 overflow-y-auto pr-1">
+    <div className="min-w-0">
       {historyDate !== undefined ? (
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium">History</p>
+        <div className="bg-fill-hover mb-8 flex gap-3 rounded-md px-3 py-2.5">
+          <History
+            aria-hidden="true"
+            className="text-muted-foreground mt-0.5 size-4 shrink-0"
+          />
 
-            <p className="text-muted-foreground mt-1 text-xs">
-              Showing work for {formatCadenceDate(historyDate)}. Completed items
-              are checked; missed scheduled items are locked.
-            </p>
-          </CardContent>
-        </Card>
+          <p className="text-muted-foreground text-(length:--cd-text-ui) leading-relaxed">
+            <span className="text-foreground font-medium">
+              {formatCadenceDate(historyDate)}.
+            </span>{' '}
+            Completed items are checked; missed scheduled items are locked.
+          </p>
+        </div>
       ) : null}
 
       <HabitsSection />
@@ -78,6 +79,6 @@ export function MainWorkspace() {
       <TasksSection />
 
       <NormalItemsSection />
-    </section>
+    </div>
   );
 }

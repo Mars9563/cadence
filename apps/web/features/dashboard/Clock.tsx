@@ -1,15 +1,12 @@
 'use client';
 
-import { MdAccessTime, MdTimelapse } from 'react-icons/md';
-
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-
 import {
   useCadenceDayEnd,
   useCurrentDateTime,
   useUser,
 } from '@/store/selectors';
+
+import { formatTime } from '@/lib/itemFormat';
 
 import { ClockUpdater } from './ClockUpdater';
 
@@ -48,51 +45,34 @@ export function Clock() {
     <>
       <ClockUpdater />
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] uppercase">
-                <MdAccessTime size={13} />
-                Current time
-              </div>
+      <section aria-label="Time" className="border-b border-border/70 px-5 py-5">
+        <p
+          className="text-foreground text-[2rem] leading-none font-medium tracking-[-0.02em] tabular-nums"
+          suppressHydrationWarning
+        >
+          {time}
+        </p>
 
-              <p
-                className="text-4xl font-semibold tracking-[-0.04em] tabular-nums"
-                suppressHydrationWarning
-              >
-                {time}
-              </p>
+        <p
+          className="text-muted-foreground mt-2 truncate text-(length:--cd-text-ui)"
+          suppressHydrationWarning
+        >
+          {date}
+        </p>
 
-              <p
-                className="text-muted-foreground mt-1 truncate text-xs"
-                suppressHydrationWarning
-              >
-                {date}
-              </p>
-            </div>
+        <div className="mt-4 flex items-baseline justify-between gap-3 text-(length:--cd-text-ui)">
+          <dl className="flex items-baseline gap-1.5">
+            <dt className="text-muted-foreground">Day ends at</dt>
+            <dd className="text-foreground tabular-nums">
+              {formatTime(endTime ?? null) ?? '--:--'}
+            </dd>
+          </dl>
 
-            <Separator orientation="vertical" className="h-16" />
-
-            <div className="min-w-24">
-              <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] uppercase">
-                <MdTimelapse size={13} />
-                Cadence
-              </div>
-
-              <p className="text-muted-foreground text-[11px]">Day ends at</p>
-
-              <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                {endTime ?? '--:--'}
-              </p>
-
-              <p className="text-muted-foreground mt-0.5 text-[10px] tabular-nums">
-                {remainingTime ?? 'Calculating...'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <p className="text-muted-foreground tabular-nums">
+            {remainingTime ?? 'Calculating…'}
+          </p>
+        </div>
+      </section>
     </>
   );
 }

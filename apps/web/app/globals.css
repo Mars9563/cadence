@@ -118,6 +118,11 @@
   --cd-danger: #e3907f;
   --cd-warning: #d8bb80;
 
+  /* Data series (calendar dots): muted, distinct hues that sit with the palette */
+  --cd-series-habit: #a3c293;
+  --cd-series-task: #8eaacc;
+  --cd-series-normal: #d8bb80;
+
   /* Type */
   --cd-font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --cd-font-prose: var(--font-literata), ui-serif, Georgia, serif;
@@ -209,6 +214,22 @@ html[data-surface='workspace'] [data-slot='tooltip-content'] {
 
 html[data-surface='workspace'] [data-slot='tooltip-content'] > div[data-side] {
   display: none;
+}
+
+/* Dialog titles: shadcn's font-heading is the mono face; use the UI face. */
+html[data-surface='workspace'] :is([data-slot='dialog-title'], [data-slot='alert-dialog-title']) {
+  font-family: var(--cd-font-ui);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Dialogs: a deeper scrim and the raised-surface shadow. */
+html[data-surface='workspace'] :is([data-slot='dialog-overlay'], [data-slot='alert-dialog-overlay']) {
+  background: rgb(0 0 0 / 0.5);
+}
+
+html[data-surface='workspace'] :is([data-slot='dialog-content'], [data-slot='alert-dialog-content']) {
+  box-shadow: var(--cd-shadow-popover);
 }
 
 @media (prefers-reduced-motion: reduce) {

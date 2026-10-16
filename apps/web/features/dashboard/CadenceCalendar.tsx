@@ -9,9 +9,7 @@ import {
   type DayButtonProps,
 } from '@daypicker/react';
 
-import { MdChevronLeft, MdChevronRight, MdEvent } from 'react-icons/md';
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -35,43 +33,35 @@ import {
 } from '@/store/selectors';
 
 const CALENDAR_STYLE = {
-  '--rdp-day-height': '44px',
-  '--rdp-day-width': '44px',
-  '--rdp-day_button-height': '40px',
-  '--rdp-day_button-width': '40px',
-  '--rdp-nav_button-height': '32px',
-  '--rdp-nav_button-width': '32px',
+  '--rdp-day-height': '40px',
+  '--rdp-day-width': '40px',
+  '--rdp-day_button-height': '36px',
+  '--rdp-day_button-width': '36px',
+  '--rdp-nav_button-height': '28px',
+  '--rdp-nav_button-width': '28px',
 } as CSSProperties;
+
+/* The three series, in the order their dots appear under each day. */
+const SERIES = [
+  { key: 'habit', label: 'Habits', color: 'bg-(--cd-series-habit)' },
+  { key: 'task', label: 'Tasks', color: 'bg-(--cd-series-task)' },
+  { key: 'normal', label: 'Normal', color: 'bg-(--cd-series-normal)' },
+] as const;
+
+const NAV_BUTTON =
+  'text-muted-foreground hover:bg-fill-hover hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors duration-(--cd-duration-fast) outline-none focus-visible:ring-1 focus-visible:ring-primary/60 disabled:opacity-40';
 
 function scoreOpacity(score: number): number {
   return 0.18 + score * 0.82;
 }
 
 function CalendarChevron({ orientation, className, size }: ChevronProps) {
-  if (orientation === 'left') {
-    return (
-      <MdChevronLeft
-        className={className}
-        size={size ?? 20}
-        aria-hidden="true"
-      />
-    );
-  }
-
-  if (orientation === 'right') {
-    return (
-      <MdChevronRight
-        className={className}
-        size={size ?? 20}
-        aria-hidden="true"
-      />
-    );
-  }
+  const Icon = orientation === 'left' ? ChevronLeft : ChevronRight;
 
   return (
-    <MdChevronRight
-      className={className}
-      size={size ?? 20}
+    <Icon
+      className={cn('size-4', className)}
+      size={size}
       aria-hidden="true"
     />
   );
@@ -125,7 +115,7 @@ export function CadenceCalendar() {
         title={title}
         className={cn(
           props.className,
-          'flex flex-col gap-0.5 rounded-xl leading-none transition-colors',
+          'flex flex-col gap-1 leading-none',
         )}
       >
         <span>{props.children}</span>
@@ -134,137 +124,104 @@ export function CadenceCalendar() {
           className="pointer-events-none flex items-center gap-0.5"
           aria-hidden="true"
         >
-          <span
-            className="size-1 rounded-full bg-emerald-500"
-            style={{
-              opacity: scoreOpacity(stats.habit.score),
-            }}
-          />
-
-          <span
-            className="size-1 rounded-full bg-blue-500"
-            style={{
-              opacity: scoreOpacity(stats.task.score),
-            }}
-          />
-
-          <span
-            className="size-1 rounded-full bg-amber-500"
-            style={{
-              opacity: scoreOpacity(stats.normal.score),
-            }}
-          />
+          {SERIES.map((series) => (
+            <span
+              key={series.key}
+              className={cn('size-1 rounded-full', series.color)}
+              style={{ opacity: scoreOpacity(stats[series.key].score) }}
+            />
+          ))}
         </span>
       </DayButton>
     );
   }
 
   return (
-    <Card className="min-w-0 overflow-hidden">
-      <CardHeader className="px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="bg-muted flex size-8 items-center justify-center rounded-lg border">
-              <MdEvent className="text-muted-foreground" size={17} />
-            </div>
+    <section aria-labelledby="cadence-calendar-title" className="min-w-0 px-4 pt-5 pb-5">
+      <div className="mb-2 px-1">
+        <h2
+          id="cadence-calendar-title"
+          className="text-foreground text-(length:--cd-text-ui) font-medium"
+        >
+          Calendar
+        </h2>
 
-            <div>
-              <CardTitle className="text-sm">Calendar</CardTitle>
+        <p className="text-muted-foreground mt-0.5 text-(length:--cd-text-meta)">
+          Pick a past day to review it.
+        </p>
+      </div>
 
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                Review your cadence history
-              </p>
-            </div>
-          </div>
+      <DayPicker
+        mode="single"
+        defaultMonth={todayDate}
+        selected={selected}
+        onSelect={(date) =>
+          setSelectedDate(date ? localDateToCadenceDate(date) : null)
+        }
+        today={todayDate}
+        disabled={{ after: todayDate }}
+        navLayout="around"
+        className="w-full"
+        style={CALENDAR_STYLE}
+        classNames={{
+          root: 'w-full',
+          months: 'w-full',
 
-          <span className="text-muted-foreground text-[10px] tracking-wider uppercase">
-            History
-          </span>
-        </div>
-      </CardHeader>
+          // Caption between the two nav buttons, the day grid as a second row.
+          month: 'grid w-full grid-cols-[auto_1fr_auto] items-center',
 
-      <CardContent className="min-w-0 px-3 pt-1 pb-4">
-        <DayPicker
-          mode="single"
-          defaultMonth={todayDate}
-          selected={selected}
-          onSelect={(date) =>
-            setSelectedDate(date ? localDateToCadenceDate(date) : null)
-          }
-          today={todayDate}
-          disabled={{ after: todayDate }}
-          navLayout="around"
-          className="w-full"
-          style={CALENDAR_STYLE}
-          classNames={{
-            root: 'w-full',
-            months: 'w-full',
+          month_caption: 'flex h-9 min-w-0 items-center justify-center',
 
-            // THIS IS THE IMPORTANT CHANGE
-            month: 'grid w-full grid-cols-[auto_1fr_auto]',
+          caption_label: 'text-(length:--cd-text-ui) font-medium text-foreground',
 
-            month_caption: 'flex h-10 min-w-0 items-center justify-center',
+          nav: '',
 
-            caption_label: 'text-sm font-semibold tracking-tight',
+          button_previous: NAV_BUTTON,
 
-            // nav is irrelevant with this DayPicker layout
-            nav: '',
+          button_next: NAV_BUTTON,
 
-            button_previous:
-              'inline-flex size-8 items-center justify-center rounded-lg border border-border bg-muted/60 text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          weekdays: 'w-full',
 
-            button_next:
-              'inline-flex size-8 items-center justify-center rounded-lg border border-border bg-muted/60 text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          weekday:
+            'text-muted-foreground py-2 text-center text-[11px] font-normal',
 
-            weekdays: 'w-full',
+          month_grid: 'col-span-3 w-full table-fixed border-collapse',
 
-            weekday:
-              'text-muted-foreground py-2 text-center text-[10px] font-semibold uppercase tracking-wider',
+          week: 'w-full',
 
-            // THIS MAKES THE TABLE THE SECOND ROW
-            month_grid: 'col-span-3 w-full table-fixed border-collapse',
+          day: 'h-10 p-0 text-center align-middle',
 
-            week: 'w-full',
+          day_button:
+            'mx-auto flex size-9 items-center justify-center rounded-md text-(length:--cd-text-ui) text-foreground transition-colors duration-(--cd-duration-fast) hover:bg-fill-hover outline-none focus-visible:ring-1 focus-visible:ring-primary/60',
 
-            day: 'h-11 p-0 text-center align-middle',
+          // These land on the day cell; style the button inside it.
+          selected:
+            '[&>button]:bg-fill-selected [&>button]:ring-1 [&>button]:ring-primary/70',
 
-            day_button:
-              'mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-xs font-medium transition-all hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          today: '[&>button]:text-primary [&>button]:font-semibold',
 
-            selected:
-              'bg-background text-primary-foreground hover:bg-background rounded-2xl',
+          disabled:
+            'cursor-not-allowed [&>button]:text-faint-foreground [&>button]:opacity-50 [&>button]:hover:bg-transparent',
 
-            today: 'bg-muted text-foreground font-semibold ring-1 ring-border',
+          outside: '[&>button]:text-faint-foreground',
+        }}
+        components={{
+          DayButton: HistoryDayButton,
+          Chevron: CalendarChevron,
+        }}
+      />
 
-            disabled: 'text-muted-foreground/35 cursor-not-allowed',
-
-            outside: 'text-muted-foreground/30',
-          }}
-          components={{
-            DayButton: HistoryDayButton,
-            Chevron: CalendarChevron,
-          }}
-        />
-
-        <div className="border-t pt-3">
-          <div className="text-muted-foreground flex items-center justify-center gap-4 text-[9px] font-medium tracking-wider uppercase">
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              Habits
-            </span>
-
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-blue-500" />
-              Tasks
-            </span>
-
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-amber-500" />
-              Normal
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <ul
+        aria-label="Dot colours"
+        className="text-muted-foreground mt-3 flex items-center justify-center gap-4 border-t border-border/70 pt-3 text-(length:--cd-text-meta)"
+      >
+        {SERIES.map((series) => (
+          <li key={series.key} className="flex items-center gap-1.5">
+            <span className={cn('size-1.5 rounded-full', series.color)} />
+            {series.label}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

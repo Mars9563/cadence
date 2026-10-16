@@ -24,6 +24,8 @@ import { BookOpen, PencilLine } from 'lucide-react';
 
 import '@mdxeditor/editor/style.css';
 import './dailyNote.css';
+// The notes editor's writing surface (header row, title, typography, toolbar).
+import '@/features/notes/Editor/noteEditor.css';
 
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,6 +34,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cadenceDateToLocalDate } from '@/lib/history';
 import { cn } from '@/lib/utils';
 import {
   useDailyNotes,
@@ -54,6 +57,15 @@ type DailyNoteEditorProps = {
    */
   initialContent: string;
 };
+
+/** '2026-10-17' -> 'Saturday, 17 October' */
+function formatNoteDate(noteDate: string): string {
+  return cadenceDateToLocalDate(noteDate).toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
 
 /**
  * After focusing at the very end of the document, bring that end into view.
@@ -153,18 +165,19 @@ const DailyNoteEditor = memo(
     );
 
     return (
-      <section className={cn('daily-note-shell', readOnly && 'is-read-only')}>
-        <header className="daily-note-header">
-          <div className="daily-note-heading">
-            <div className="daily-note-kicker">
-              <span className="daily-note-kicker-dot" aria-hidden="true" />
-              Journal
-            </div>
-            <h1>Daily Note</h1>
-            <p>{noteDate}</p>
-          </div>
+      <section
+        className={cn(
+          'daily-note-shell note-editor-pane',
+          readOnly && 'is-read-only',
+        )}
+      >
+        {/* Same header row as a note: location, then save state + reading toggle. */}
+        <header className="note-editor-header">
+          <p className="note-breadcrumb">
+            <span className="note-breadcrumb-current">Daily note</span>
+          </p>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="note-editor-actions">
             <DailyNoteSaveIndicator
               status={autosave.status}
               error={autosave.error}
@@ -176,6 +189,7 @@ const DailyNoteEditor = memo(
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground aria-pressed:bg-fill-selected aria-pressed:text-foreground size-7 rounded-md"
                     aria-pressed={readOnly}
                     aria-label={
                       readOnly ? 'Switch to editing' : 'Switch to reading'
@@ -202,6 +216,10 @@ const DailyNoteEditor = memo(
          * document.
          */}
         <ScrollArea className="daily-note-scroll">
+          <div className="note-title-block">
+            <h1 className="note-inline-title">{formatNoteDate(noteDate)}</h1>
+          </div>
+
           <MDXEditor
             ref={editorRef}
             markdown={initialContent}
@@ -235,9 +253,9 @@ export function DailyNote() {
    */
   if (!activeNote) {
     return (
-      <section className="daily-note-shell">
-        <div className="daily-note-loading">
-          <p>Your daily note is still loading…</p>
+      <section className="daily-note-shell note-editor-pane">
+        <div className="daily-note-loading" role="status">
+          <p>Opening today’s note…</p>
         </div>
       </section>
     );

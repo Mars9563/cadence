@@ -3,9 +3,9 @@
    ========================================================================== */
 
 .daily-note-shell {
-  --daily-note-panel: var(--card);
+  --daily-note-panel: var(--background);
   --daily-note-canvas: var(--background);
-  --daily-note-toolbar: color-mix(in oklch, var(--card) 92%, var(--background));
+  --daily-note-toolbar: var(--background);
 
   display: flex;
   width: 100%;
@@ -15,12 +15,8 @@
   flex-direction: column;
   overflow: hidden;
 
-  border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
-  border-radius: 1rem;
   background: var(--daily-note-panel);
   color: var(--foreground);
-  box-shadow: 0 18px 48px
-    color-mix(in oklch, var(--foreground) 10%, transparent);
 }
 
 .daily-note-loading {
@@ -29,76 +25,7 @@
   flex: 1;
   place-items: center;
   color: var(--muted-foreground);
-  font-size: 0.75rem;
-}
-
-/* --------------------------------------------------------------------------
-   Note header
-   -------------------------------------------------------------------------- */
-
-.daily-note-header {
-  display: flex;
-  min-height: 72px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1.15rem 0.8rem 1.25rem;
-
-  border-bottom: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
-  background:
-    radial-gradient(
-      circle at 12% 0%,
-      color-mix(in oklch, var(--primary) 7%, transparent),
-      transparent 34%
-    ),
-    var(--daily-note-panel);
-}
-
-.daily-note-heading {
-  min-width: 0;
-}
-
-.daily-note-kicker {
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  margin-bottom: 0.2rem;
-
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.daily-note-kicker-dot {
-  width: 0.34rem;
-  height: 0.34rem;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 11%, transparent);
-}
-
-.daily-note-heading h1 {
-  margin: 0;
-  color: var(--foreground);
-  font-family: var(--font-heading);
-  font-size: 1rem;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-.daily-note-heading p {
-  margin: 0.28rem 0 0;
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  line-height: 1;
+  font-size: var(--cd-text-ui);
 }
 
 /* --------------------------------------------------------------------------
@@ -479,12 +406,6 @@
    -------------------------------------------------------------------------- */
 
 @media (max-width: 640px) {
-  .daily-note-header {
-    min-height: 66px;
-    padding-right: 0.9rem;
-    padding-left: 1rem;
-  }
-
   .daily-note-editor .mdxeditor-toolbar {
     overflow-x: auto;
   }

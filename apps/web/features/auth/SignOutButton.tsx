@@ -1,6 +1,6 @@
 'use client';
 
-import { MdLogout } from 'react-icons/md';
+import { LogOut } from 'lucide-react';
 
 import { useSetSignOutModalOpen } from '@/store/selectors';
 
@@ -11,11 +11,11 @@ export function SignOutButton() {
     <button
       type="button"
       onClick={() => setSignOutModalOpen(true)}
-      className="text-muted-foreground hover:bg-background hover:text-foreground flex w-full items-center justify-center gap-2 rounded-xl p-2.5 transition-colors"
+      className="text-muted-foreground hover:bg-fill-hover hover:text-foreground focus-visible:ring-primary/60 flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-(length:--cd-text-ui) transition-colors duration-(--cd-duration-fast) outline-none focus-visible:ring-1"
     >
-      <MdLogout size={22} />
+      <LogOut aria-hidden="true" className="size-4" />
 
-      <span className="text-sm font-medium">Logout</span>
+      <span>Sign out</span>
     </button>
   );
 }

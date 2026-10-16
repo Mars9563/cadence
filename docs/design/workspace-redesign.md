@@ -1,7 +1,23 @@
 # Workspace redesign: audit and design foundation
 
-Scope: the Notes workspace (icon rail, folder/note tree, tabbed editor).
-Other screens keep their current styling until they opt into the new surface.
+Scope: the Notes workspace (icon rail, folder/note tree, tabbed editor) and
+the Dashboard (sidebar, day page, time/calendar column, Daily Note, item
+dialogs). Both call `useSurface('workspace')`; the auth pages and the loading
+screen keep their current styling until they opt in.
+
+## Dashboard notes
+
+- Same shell as Notes: edge-to-edge sidebar, 40px top band (view tabs left,
+  connection + user right), canvas below.
+- Day page: Literata greeting, then Habits / Tasks / Normal items as hairline
+  lists (no cards) on a 768px column. Time and calendar sit in a 288–312px
+  context column (stacked below the lists under 1024px).
+- Calendar dots use `--cd-series-habit|task|normal`, muted hues that sit with
+  the palette; dot position still encodes the series.
+- The Daily Note reuses the note editor's surface (`note-editor-pane`):
+  header row, Literata date title, column-aligned toolbar.
+- Removed: the "Weather: coming soon" placeholder, the decorative "Your
+  workspace" sidebar card, and the user chip's chevron (it had no menu).
 
 ## Stack (as found)
 

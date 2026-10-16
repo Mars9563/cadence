@@ -14,13 +14,8 @@ import {
 import { SignOutButton } from '@/features/auth/SignOutButton';
 import { SignOutDialog } from '@/features/auth/SignOutDialog';
 
-import { LayoutDashboard, LogOut, NotebookText } from 'lucide-react';
-import {
-  MdDashboard,
-  MdNotes,
-  MdSettings,
-  MdSpaceDashboard,
-} from 'react-icons/md';
+import { LayoutDashboard, LogOut, NotebookText, Settings } from 'lucide-react';
+import { MdSpaceDashboard } from 'react-icons/md';
 
 import {
   useSetSignOutModalOpen,
@@ -134,95 +129,99 @@ function CollapsedSidebar() {
   );
 }
 
+function NavRow({
+  label,
+  icon,
+  active = false,
+  disabled = false,
+  badge,
+  onClick,
+}: {
+  label: string;
+  icon: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  badge?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-current={active ? 'page' : undefined}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'text-muted-foreground relative flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-(length:--cd-text-ui) transition-colors duration-(--cd-duration-fast) outline-none',
+        'hover:bg-fill-hover hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/60',
+        'disabled:text-faint-foreground disabled:hover:bg-transparent',
+        /* Active: filled, plus a short accent bar on the sidebar edge. */
+        active &&
+          'bg-fill-selected text-foreground hover:bg-fill-selected before:bg-primary before:absolute before:top-1/2 before:-left-2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full',
+      )}
+    >
+      <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center">
+        {icon}
+      </span>
+
+      <span className="truncate">{label}</span>
+
+      {badge ? (
+        <span className="bg-fill-selected text-muted-foreground ml-auto rounded-sm px-1.5 py-0.5 text-[11px] leading-none">
+          {badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
 function ExpandedSidebar() {
   const viewMode = useViewMode();
   const setViewMode = useSetViewMode();
 
   return (
     <>
-      <aside className="bg-card flex w-56 shrink-0 flex-col rounded-2xl border p-3 shadow-sm">
-        {/* Brand */}
-        <div className="border-b px-2 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl shadow-sm">
-              <MdSpaceDashboard size={21} />
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-sm font-semibold tracking-tight">Cadence</p>
-
-              <p className="text-muted-foreground text-[11px]">Own your day.</p>
-            </div>
+      <aside className="bg-sidebar flex w-56 shrink-0 flex-col border-r border-border/70">
+        {/* Brand, in the shared top band. */}
+        <div className="flex h-(--cd-band-height) shrink-0 items-center gap-2.5 px-3">
+          <div
+            aria-hidden="true"
+            className="bg-surface-raised text-primary flex size-7 items-center justify-center rounded-md"
+          >
+            <MdSpaceDashboard size={16} />
           </div>
+
+          <p className="text-foreground text-(length:--cd-text-ui) font-semibold">
+            Cadence
+          </p>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4 flex flex-col gap-1.5" aria-label="Primary">
-          <p className="text-muted-foreground mb-1 px-2 text-[10px] font-semibold tracking-[0.16em] uppercase">
-            Workspace
-          </p>
-
-          <Button
-            variant="ghost"
-            className={cn(
-              'h-10 w-full justify-start gap-3 rounded-xl px-3',
-              viewMode === 'Dashboard' && 'bg-muted text-foreground shadow-sm',
-            )}
+        <nav className="mt-2 flex flex-col gap-0.5 px-2" aria-label="Primary">
+          <NavRow
+            label="Dashboard"
+            icon={<LayoutDashboard className="size-4" />}
+            active={viewMode === 'Dashboard'}
             onClick={() => setViewMode('Dashboard')}
-          >
-            <MdDashboard size={18} />
-            <span>Dashboard</span>
-          </Button>
+          />
 
-          <Button
-            variant="ghost"
-            className={cn(
-              'h-10 w-full justify-start gap-3 rounded-xl px-3',
-              viewMode === 'Notes' && 'bg-muted text-foreground shadow-sm',
-            )}
+          <NavRow
+            label="Notes"
+            icon={<NotebookText className="size-4" />}
+            active={viewMode === 'Notes'}
             onClick={() => setViewMode('Notes')}
-          >
-            <MdNotes size={18} />
-            <span>Notes</span>
-          </Button>
+          />
 
-          <div className="mt-4">
-            <p className="text-muted-foreground mb-1 px-2 text-[10px] font-semibold tracking-[0.16em] uppercase">
-              System
-            </p>
-
-            <Button
-              variant="ghost"
-              className="text-muted-foreground h-10 w-full justify-start gap-3 rounded-xl px-3"
-              disabled
-            >
-              <MdSettings size={18} />
-              <span>Settings</span>
-
-              <span className="bg-muted text-muted-foreground ml-auto rounded-md px-1.5 py-0.5 text-[9px] font-medium tracking-wider uppercase">
-                Soon
-              </span>
-            </Button>
-          </div>
+          <NavRow
+            label="Settings"
+            icon={<Settings className="size-4" />}
+            disabled
+            badge="Soon"
+          />
         </nav>
 
         {/* Bottom area */}
-        <div className="mt-auto pt-4">
-          <div className="bg-muted/50 mb-3 rounded-xl border p-3">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary size-1.5 rounded-full" />
-
-              <p className="text-xs font-medium">Your workspace</p>
-            </div>
-
-            <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
-              Keep the important things visible and the noise out.
-            </p>
-          </div>
-
-          <div className="border-t pt-3">
-            <SignOutButton />
-          </div>
+        <div className="mt-auto px-2 pb-2">
+          <SignOutButton />
         </div>
       </aside>
 

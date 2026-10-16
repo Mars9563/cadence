@@ -24,7 +24,7 @@ export function DailyNoteSaveIndicator({
           speed={0.5}
           paused
           label="Saved"
-          className="text-emerald-500"
+          className="text-primary"
         />
         Saved
       </span>
@@ -39,7 +39,7 @@ export function DailyNoteSaveIndicator({
           size={14}
           speed={0.8}
           label="Saving"
-          className="text-muted-foreground"
+          className="text-faint-foreground"
         />
         Saving…
       </span>
@@ -73,7 +73,7 @@ export function DailyNoteSaveIndicator({
         speed={0.55}
         paused
         label="Unsaved changes"
-        className="text-amber-500"
+        className="text-(--cd-warning)"
       />
       Unsaved changes
     </span>
