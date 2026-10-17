@@ -37,31 +37,18 @@ export function registerNotesHandlers(socket: Socket) {
    * }
    *
    * On success the server replies with a minimal acknowledgement
-   * (`note:saved` with `{ noteId, saveId }`). The document itself is
+   * (`{ ok: true, data: { noteId, saveId } }` on the ack). The document itself is
    * never echoed back: the client's editor stays the source of truth.
    *
-   * Every failure is reported on `note:operation:failed` and carries
-   * `noteId` / `saveId` (when they were well-formed) so the client can match
-   * it to the save attempt it belongs to.
+   * Every failure is reported on the same ack as `{ ok: false, code }`.
    */
   socket.on('note:update', async (payload: UpdateNotePayload, ack?: unknown) => {
-    const noteId =
-      typeof payload?.noteId === 'string' ? payload.noteId : undefined;
-
     const saveId =
       Number.isSafeInteger(payload?.saveId) && payload.saveId >= 0
         ? payload.saveId
         : undefined;
 
-    const fail = (code: string) => {
-      socket.emit('note:operation:failed', {
-        operation: 'update',
-        noteId,
-        saveId,
-        code,
-      });
-      reply(ack, { ok: false, code });
-    };
+    const fail = (code: string) => reply(ack, { ok: false, code });
 
     try {
       if (saveId === undefined) {
@@ -101,7 +88,6 @@ export function registerNotesHandlers(socket: Socket) {
         saveId,
       };
 
-      socket.emit('note:saved', saved);
       reply(ack, { ok: true, data: saved });
     } catch (error) {
       console.error('Failed to update note:', error);

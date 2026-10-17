@@ -2,17 +2,16 @@
   "name": "@cadence/server",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "tsup",
+    "start": "node --enable-source-maps dist/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "packageManager": "pnpm@10.33.2",
   "dependencies": {
     "@cadence/types": "workspace:*",
@@ -22,15 +21,22 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
+    "rate-limiter-flexible": "^11.2.2",
     "socket.io": "^4.8.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "tsup": "^9.0.0",
     "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2"
   }
 }

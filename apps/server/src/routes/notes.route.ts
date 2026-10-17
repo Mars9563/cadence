@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { authenticate } from '../middleware/auth';
+import { requireUser } from '../lib/rateLimit.js';
 
 import {
   createNote,
@@ -13,14 +13,14 @@ import {
 const router = Router();
 
 // Registered before '/notes/:id' so 'get' is never read as a note id.
-router.get('/notes/get', authenticate, getNotes);
+router.get('/notes/get', requireUser, getNotes);
 
-router.get('/notes/:id', authenticate, getNote);
+router.get('/notes/:id', requireUser, getNote);
 
-router.post('/notes/create', authenticate, createNote);
+router.post('/notes/create', requireUser, createNote);
 
-router.patch('/notes/:id', authenticate, updateNote);
+router.patch('/notes/:id', requireUser, updateNote);
 
-router.delete('/notes/:id', authenticate, deleteNote);
+router.delete('/notes/:id', requireUser, deleteNote);
 
 export default router;

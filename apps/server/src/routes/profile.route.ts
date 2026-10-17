@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { authenticate } from '../middleware/auth.js';
+import { avatarUploadLimiter, requireUser } from '../lib/rateLimit.js';
 import {
   getAvatarUrl,
   getProfile,
@@ -24,12 +24,17 @@ const router = Router();
  *   DELETE /profile/avatar            remove the uploaded picture
  *   GET    /profile/avatar?size=      signed URL in 64/128/256/512
  */
-router.get('/profile', authenticate, getProfile);
-router.patch('/profile', authenticate, updateProfile);
+router.get('/profile', requireUser, getProfile);
+router.patch('/profile', requireUser, updateProfile);
 
-router.post('/profile/avatar/signature', authenticate, signAvatarUploadRequest);
-router.put('/profile/avatar', authenticate, setAvatar);
-router.delete('/profile/avatar', authenticate, removeAvatar);
-router.get('/profile/avatar', authenticate, getAvatarUrl);
+router.post(
+  '/profile/avatar/signature',
+  requireUser,
+  avatarUploadLimiter,
+  signAvatarUploadRequest,
+);
+router.put('/profile/avatar', requireUser, setAvatar);
+router.delete('/profile/avatar', requireUser, removeAvatar);
+router.get('/profile/avatar', requireUser, getAvatarUrl);
 
 export default router;

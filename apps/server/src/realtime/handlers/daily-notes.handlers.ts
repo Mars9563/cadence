@@ -44,17 +44,12 @@ export function registerDailyNotesHandlers(
 
         const dailyNote = result.data?.dailyNote;
 
-        socket.emit('daily-note:created', { dailyNote });
         reply(ack, { ok: true, data: { dailyNote } });
       } catch (error) {
         const code = errorCode(error, 'DAILY_NOTE_CREATE_FAILED');
 
         console.error('Failed to create daily note:', code);
 
-        socket.emit('daily-note:operation:failed', {
-          operation: 'create',
-          code,
-        });
         reply(ack, { ok: false, code });
       }
     },
@@ -72,33 +67,20 @@ export function registerDailyNotesHandlers(
    * }
    *
    * On success the server replies with a minimal acknowledgement
-   * (`daily-note:saved` with `{ noteId, saveId }`). The document itself is
+   * (`{ ok: true, data: { noteId, saveId } }` on the ack). The document itself is
    * never echoed back: the client's editor stays the source of truth.
    *
-   * Every failure is reported on `daily-note:operation:failed` and carries
-   * `noteId` / `saveId` (when they were well-formed) so the client can match
-   * it to the save attempt it belongs to.
+   * Every failure is reported on the same ack as `{ ok: false, code }`.
    */
   socket.on(
     'daily-note:update',
     async (payload: UpdateDailyNotePayload, ack?: unknown) => {
-      const noteId =
-        typeof payload?.noteId === 'string' ? payload.noteId : undefined;
-
       const saveId =
         Number.isSafeInteger(payload?.saveId) && payload.saveId >= 0
           ? payload.saveId
           : undefined;
 
-      const fail = (code: string) => {
-        socket.emit('daily-note:operation:failed', {
-          operation: 'update',
-          noteId,
-          saveId,
-          code,
-        });
-        reply(ack, { ok: false, code });
-      };
+      const fail = (code: string) => reply(ack, { ok: false, code });
 
       try {
         if (saveId === undefined) {
@@ -140,7 +122,6 @@ export function registerDailyNotesHandlers(
           saveId,
         };
 
-        socket.emit('daily-note:saved', saved);
         reply(ack, { ok: true, data: saved });
       } catch (error) {
         console.error(

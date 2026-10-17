@@ -39,7 +39,7 @@ export async function getDailyNotesByUserId(
     .order('created_at');
 
   if (error) {
-    console.log('Failed to query database for dailyNotes:', error);
+    console.error('Failed to query database for dailyNotes:', error);
 
     throw new Error('DAILY_NOTES_FETCH_FAILED');
   }
@@ -92,7 +92,7 @@ export async function addDailyNoteByUserId(
   });
 
   if (dateError || !noteDate) {
-    console.log('Failed to determine Cadence date for daily note:', dateError);
+    console.error('Failed to determine Cadence date for daily note:', dateError);
 
     throw new Error('CADENCE_DATE_RESOLUTION_FAILED');
   }
@@ -125,7 +125,7 @@ export async function addDailyNoteByUserId(
   }
 
   if (error || !data) {
-    console.log('Failed to create daily note:', error);
+    console.error('Failed to create daily note:', error);
 
     throw new Error('DAILY_NOTE_CREATE_FAILED');
   }
@@ -165,13 +165,13 @@ export async function updateDailyNoteById(
     .eq('id', noteId);
 
   if (error) {
-    console.log('Failed to update daily note:', error);
+    console.error('Failed to update daily note:', error);
 
     throw new Error('DAILY_NOTE_UPDATE_FAILED');
   }
 
   if (!count) {
-    console.log('Daily note update affected no rows:', noteId);
+    console.error('Daily note update affected no rows:', noteId);
 
     throw new Error('DAILY_NOTE_NOT_FOUND');
   }

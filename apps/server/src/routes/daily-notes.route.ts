@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { authenticate } from '../middleware/auth';
+import { requireUser } from '../lib/rateLimit.js';
 
 import {
   createDailyNote,
@@ -10,10 +10,10 @@ import {
 
 const router = Router();
 
-router.get('/daily-notes/get', authenticate, getDailyNotes);
+router.get('/daily-notes/get', requireUser, getDailyNotes);
 
-router.post('/daily-notes/create', authenticate, createDailyNote);
+router.post('/daily-notes/create', requireUser, createDailyNote);
 
-router.patch('/daily-notes/:id', authenticate, updateDailyNote);
+router.patch('/daily-notes/:id', requireUser, updateDailyNote);
 
 export default router;

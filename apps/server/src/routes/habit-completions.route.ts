@@ -1,11 +1,11 @@
 import { Router } from 'express';
 
-import { authenticate } from '../middleware/auth';
+import { requireUser } from '../lib/rateLimit.js';
 
 import { getHabitCompletions } from '../controllers/habit-completions.controller';
 
 const router = Router();
 
-router.get('/habit-completions/get', authenticate, getHabitCompletions);
+router.get('/habit-completions/get', requireUser, getHabitCompletions);
 
 export default router;

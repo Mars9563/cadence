@@ -919,7 +919,8 @@ execute function public.handle_new_user_root_folder();
 -- 12. BACKFILL ROOT FOLDERS
 -- ============================================================================
 --
--- This handles your two existing users.
+-- Gives a root folder to any user created before the trigger above existed.
+-- A no-op on a fresh database.
 --
 -- ============================================================================
  
@@ -1588,7 +1589,7 @@ using (
 
 
 -- ============================================================================
--- CADENCE — MIGRATION 001: fixes from docs/ARCHITECTURE.md section 0
+-- CADENCE — MIGRATION 001: date and integrity fixes
 -- ============================================================================
 --
 -- Idempotent: safe to run more than once.

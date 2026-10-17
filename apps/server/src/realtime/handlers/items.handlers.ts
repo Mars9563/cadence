@@ -29,10 +29,7 @@ export function registerItemsHandlers(socket: Socket) {
           : dateSchema.safeParse(payload.expectedDate);
 
       if (!itemId.success || (expectedDate && !expectedDate.success)) {
-        const code = 'INVALID_COMPLETION_REQUEST';
-
-        socket.emit('item:completion:failed', { itemId: payload?.itemId, code });
-        reply(ack, { ok: false, code });
+        reply(ack, { ok: false, code: 'INVALID_COMPLETION_REQUEST' });
         return;
       }
 
@@ -45,29 +42,12 @@ export function registerItemsHandlers(socket: Socket) {
         );
 
         // result.kind is derived from the DB row, never from the client.
-        switch (result.kind) {
-          case 'normal':
-            socket.emit('item:normal:completed', { item: result.item });
-            break;
-
-          case 'task':
-            socket.emit('item:task:completed', { item: result.item });
-            break;
-
-          case 'habit':
-            socket.emit('item:habit:completed', {
-              completion: result.completion,
-            });
-            break;
-        }
-
         reply<CompleteItemResult>(ack, { ok: true, data: result });
       } catch (error) {
         const code = errorCode(error, 'ITEM_COMPLETION_FAILED');
 
         console.error('Failed to mark item completed:', code);
 
-        socket.emit('item:completion:failed', { itemId: itemId.data, code });
         reply(ack, { ok: false, code });
       }
     },

@@ -1,7 +1,7 @@
 import type { HabitCompletion } from '@cadence/types';
 
 import { createSupabaseClient } from '../supabase/supabase';
-import { apiResponse } from '../types/types';
+import type { apiResponse } from '@cadence/types';
 
 type DbHabitCompletion = {
   id: string;

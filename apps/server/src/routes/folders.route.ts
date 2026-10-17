@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { authenticate } from '../middleware/auth';
+import { requireUser } from '../lib/rateLimit.js';
 
 import {
   createFolder,
@@ -11,12 +11,12 @@ import {
 
 const router = Router();
 
-router.get('/folders/get', authenticate, getFolders);
+router.get('/folders/get', requireUser, getFolders);
 
-router.post('/folders/create', authenticate, createFolder);
+router.post('/folders/create', requireUser, createFolder);
 
-router.patch('/folders/:id', authenticate, updateFolder);
+router.patch('/folders/:id', requireUser, updateFolder);
 
-router.delete('/folders/:id', authenticate, deleteFolder);
+router.delete('/folders/:id', requireUser, deleteFolder);
 
 export default router;

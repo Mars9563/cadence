@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { requireUser } from '../lib/rateLimit.js';
 import {
   getItems,
   addNormalItem,
@@ -9,10 +9,10 @@ import {
 
 const router = Router();
 
-router.get('/items/get', authenticate, getItems);
+router.get('/items/get', requireUser, getItems);
 
-router.post('/items/add/normal', authenticate, addNormalItem);
-router.post('/items/add/task', authenticate, addTaskItem);
-router.post('/items/add/habit', authenticate, addHabitItem);
+router.post('/items/add/normal', requireUser, addNormalItem);
+router.post('/items/add/task', requireUser, addTaskItem);
+router.post('/items/add/habit', requireUser, addHabitItem);
 
 export default router;

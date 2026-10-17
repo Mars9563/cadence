@@ -19,7 +19,7 @@ import {
   PG_UNIQUE_VIOLATION,
 } from '../lib/postgres';
 import { createSupabaseClient } from '../supabase/supabase';
-import { apiResponse } from '../types/types';
+import type { apiResponse } from '@cadence/types';
 
 type SupabaseClient = ReturnType<typeof createSupabaseClient>;
 

@@ -20,6 +20,20 @@ export const CORS_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
 
 export const app = express();
 
+/*
+ * Behind a reverse proxy / ingress (k3s Traefik, nginx), set TRUST_PROXY so
+ * Express sees the real client IP (rate limiting depends on it): a hop count
+ * such as "1", or "true". Unset = not behind a proxy.
+ */
+const trustProxy = process.env.TRUST_PROXY;
+
+if (trustProxy) {
+  app.set(
+    'trust proxy',
+    /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === 'true',
+  );
+}
+
 app.use(helmet());
 
 app.use(
@@ -28,7 +42,9 @@ app.use(
   }),
 );
 
-app.use(express.json());
+// Same headroom as the socket limit: a recovered note is created over REST
+// with its full content (up to 1,000,000 characters).
+app.use(express.json({ limit: '5mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({
