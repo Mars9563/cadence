@@ -37,6 +37,13 @@ export interface habitCompletionState {
    */
   removeHabitCompletion: (completionId: string) => void;
 
+  removeHabitCompletionWhere: (
+    predicate: (completion: HabitCompletion) => boolean,
+  ) => void;
+
+  /** Replace the whole history with server data (reconcile). */
+  replaceHabitCompletions: (completions: HabitCompletion[]) => void;
+
   /**
    * Clear completion state on sign-out/user change.
    */
@@ -145,6 +152,18 @@ export const CreateHabitCompletionSlice: StateCreator<habitCompletionState> = (
         (completion) => completion.id !== completionId,
       ),
     }));
+  },
+
+  removeHabitCompletionWhere: (predicate) => {
+    set((state) => ({
+      habitCompletions: state.habitCompletions.filter(
+        (completion) => !predicate(completion),
+      ),
+    }));
+  },
+
+  replaceHabitCompletions: (completions) => {
+    set({ habitCompletions: sortHabitCompletions(completions) });
   },
 
   resetHabitCompletions: () => {

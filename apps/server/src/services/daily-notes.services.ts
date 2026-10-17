@@ -1,4 +1,5 @@
 import { apiResponse, DailyNote } from '@cadence/types';
+import { PG_UNIQUE_VIOLATION } from '../lib/postgres';
 import { createSupabaseClient } from '../supabase/supabase';
 
 interface DbDailyNote {
@@ -40,7 +41,7 @@ export async function getDailyNotesByUserId(
   if (error) {
     console.log('Failed to query database for dailyNotes:', error);
 
-    throw new Error('Failed to fetch daily notes');
+    throw new Error('DAILY_NOTES_FETCH_FAILED');
   }
 
   const notes = (data ?? []) as DbDailyNote[];
@@ -64,9 +65,19 @@ interface DailyNoteCreationResponse {
   dailyNote: DailyNote;
 }
 
+/**
+ * Make sure today's Daily Note exists and return it.
+ *
+ * Idempotent: daily_notes_user_date_key allows one note per user per Cadence
+ * date, so when today's note already exists (another tab or device created
+ * it, or this is a retry) that note is returned instead of failing. The
+ * client then adopts the returned id, which may differ from the one it
+ * suggested.
+ */
 export async function addDailyNoteByUserId(
   userId: string,
   token: string,
+  clientId?: string,
 ): Promise<apiResponse<DailyNoteCreationResponse>> {
   const supabase = createSupabaseClient(token);
 
@@ -83,12 +94,13 @@ export async function addDailyNoteByUserId(
   if (dateError || !noteDate) {
     console.log('Failed to determine Cadence date for daily note:', dateError);
 
-    throw new Error('Failed to determine current Cadence date');
+    throw new Error('CADENCE_DATE_RESOLUTION_FAILED');
   }
 
   const { data, error } = await supabase
     .from('daily_notes')
     .insert({
+      ...(clientId && { id: clientId }),
       user_id: userId,
       note_date: noteDate,
       content: '',
@@ -96,10 +108,26 @@ export async function addDailyNoteByUserId(
     .select('*')
     .single();
 
-  if (error) {
+  if (error?.code === PG_UNIQUE_VIOLATION) {
+    const { data: existing, error: existingError } = await supabase
+      .from('daily_notes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('note_date', noteDate)
+      .maybeSingle();
+
+    if (existing && !existingError) {
+      return {
+        success: true,
+        data: { dailyNote: mapDbDailyNoteToFrontend(existing as DbDailyNote) },
+      };
+    }
+  }
+
+  if (error || !data) {
     console.log('Failed to create daily note:', error);
 
-    throw new Error('Failed to create daily note');
+    throw new Error('DAILY_NOTE_CREATE_FAILED');
   }
 
   const dailyNote = mapDbDailyNoteToFrontend(data as DbDailyNote);
@@ -139,13 +167,13 @@ export async function updateDailyNoteById(
   if (error) {
     console.log('Failed to update daily note:', error);
 
-    throw new Error('Failed to update daily note');
+    throw new Error('DAILY_NOTE_UPDATE_FAILED');
   }
 
   if (!count) {
     console.log('Daily note update affected no rows:', noteId);
 
-    throw new Error('Failed to update daily note');
+    throw new Error('DAILY_NOTE_NOT_FOUND');
   }
 
   return {

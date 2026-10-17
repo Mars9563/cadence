@@ -42,7 +42,7 @@ export function NormalItemRow({
       checked={completed}
       loading={isPending}
       onCheckedChange={
-        historyDate === undefined ? handleCheckedChange : undefined
+        historyDate === undefined && !completed ? handleCheckedChange : undefined
       }
     />
   );

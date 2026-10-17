@@ -47,8 +47,18 @@ export function NormalItemsSection() {
       );
     }
 
-    return items;
-  }, [dayEndTime, historyDate, items]);
+    /*
+     * Today: everything still open, plus what was finished today. A normal
+     * item completed on an earlier Cadence day is locked by the database
+     * (item_is_editable) and belongs to that day's history, so it no longer
+     * crowds today's list.
+     */
+    return items.filter(
+      (item) =>
+        item.completedAt === null ||
+        isNormalCompletedOnDate(item, today, dayEndTime),
+    );
+  }, [dayEndTime, historyDate, items, today]);
 
   return (
     <>

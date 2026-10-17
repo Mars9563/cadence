@@ -5,6 +5,7 @@ import type { NoteSaveAck } from '@cadence/types';
 import { noteIdParamsSchema, updateNoteSchema } from '@cadence/validation';
 
 import { updateNoteContentById } from '../../services/notes.service';
+import { reply } from '../ack';
 
 type UpdateNotePayload = {
   noteId: string;
@@ -43,7 +44,7 @@ export function registerNotesHandlers(socket: Socket) {
    * `noteId` / `saveId` (when they were well-formed) so the client can match
    * it to the save attempt it belongs to.
    */
-  socket.on('note:update', async (payload: UpdateNotePayload) => {
+  socket.on('note:update', async (payload: UpdateNotePayload, ack?: unknown) => {
     const noteId =
       typeof payload?.noteId === 'string' ? payload.noteId : undefined;
 
@@ -59,6 +60,7 @@ export function registerNotesHandlers(socket: Socket) {
         saveId,
         code,
       });
+      reply(ack, { ok: false, code });
     };
 
     try {
@@ -94,12 +96,13 @@ export function registerNotesHandlers(socket: Socket) {
         socket.data.token,
       );
 
-      const ack: NoteSaveAck = {
+      const saved: NoteSaveAck = {
         noteId: paramsResult.data.id,
         saveId,
       };
 
-      socket.emit('note:saved', ack);
+      socket.emit('note:saved', saved);
+      reply(ack, { ok: true, data: saved });
     } catch (error) {
       console.error('Failed to update note:', error);
 

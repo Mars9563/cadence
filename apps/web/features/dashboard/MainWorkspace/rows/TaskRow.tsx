@@ -65,7 +65,9 @@ export function TaskRow({
       loading={isPending}
       locked={locked}
       onCheckedChange={
-        historyDate === undefined && !isFuture ? handleCheckedChange : undefined
+        historyDate === undefined && !isFuture && !completed
+          ? handleCheckedChange
+          : undefined
       }
     />
   );

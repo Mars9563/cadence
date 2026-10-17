@@ -5,6 +5,7 @@ import { itemState } from './slices/itemSlice';
 import { notesState } from './slices/notesSlice';
 import { noteTabsState } from './slices/noteTabsSlice';
 import { socketState } from './slices/socketSlice';
+import { syncState } from './slices/syncSlice';
 import { uiState } from './slices/uiSlice';
 
 export type CadenceAppStore = uiState &
@@ -14,4 +15,5 @@ export type CadenceAppStore = uiState &
   habitCompletionState &
   notesState &
   noteTabsState &
-  socketState;
+  socketState &
+  syncState;

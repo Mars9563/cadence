@@ -8,7 +8,6 @@ import {
 
 import { formatTime } from '@/lib/itemFormat';
 
-import { ClockUpdater } from './ClockUpdater';
 
 function formatRemainingTime(milliseconds: number): string {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -43,8 +42,6 @@ export function Clock() {
 
   return (
     <>
-      <ClockUpdater />
-
       <section aria-label="Time" className="border-b border-border/70 px-5 py-5">
         <p
           className="text-foreground text-[2rem] leading-none font-medium tracking-[-0.02em] tabular-nums"

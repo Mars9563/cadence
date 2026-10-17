@@ -1,9 +1,11 @@
 import { StateCreator } from 'zustand';
 import type { DailyNote } from '@cadence/types';
 
-import { createDailyNote } from '@/api/createDailyNote';
 import { getDailyNotes } from '@/api/getDailyNotes';
 import { toUserMessage } from '@/lib/errors';
+import { newId } from '@/lib/uuid';
+
+import type { CadenceAppStore } from '../types';
 
 export type DailyNotesStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -21,14 +23,17 @@ export interface dailyNoteState {
   /**
    * Make sure today's Cadence daily note exists.
    *
-   * `noteDate` must be the current Cadence date calculated
-   * by the bootstrap layer.
-   *
-   * If today's note already exists, nothing is created.
-   *
-   * If it does not exist, creation happens through HTTP.
+   * `noteDate` is the current Cadence date (bootstrap, and again whenever
+   * the day rolls over). If there is no note for it yet, one is created
+   * locally straight away, so the user can write even offline, and the
+   * create is synced. The server decides the real date and returns the
+   * existing note if another device made it first; the local note then
+   * moves to that id (see syncSlice adoptDailyNote).
    */
-  ensureTodayDailyNote: (noteDate: string) => Promise<void>;
+  ensureTodayDailyNote: (noteDate: string) => void;
+
+  /** Replace the list with server data (reconcile). */
+  replaceDailyNotes: (dailyNotes: DailyNote[]) => void;
 
   /**
    * Insert or replace a daily note in local state.
@@ -65,10 +70,12 @@ function sortDailyNotes(notes: DailyNote[]): DailyNote[] {
   );
 }
 
-export const CreateDailyNoteSlice: StateCreator<dailyNoteState> = (
-  set,
-  get,
-) => ({
+export const CreateDailyNoteSlice: StateCreator<
+  CadenceAppStore,
+  [],
+  [],
+  dailyNoteState
+> = (set, get) => ({
   ...initialDailyNoteState,
 
   fetchDailyNotes: async () => {
@@ -106,41 +113,32 @@ export const CreateDailyNoteSlice: StateCreator<dailyNoteState> = (
     }
   },
 
-  ensureTodayDailyNote: async (noteDate) => {
-    /*
-     * This method should only run after the initial daily-note
-     * fetch has completed.
-     *
-     * If bootstrap somehow calls it before the fetch has populated
-     * the slice, we still avoid creating blindly.
-     */
-    const existingNote = get().dailyNotes.find(
-      (note) => note.noteDate === noteDate,
-    );
-
-    if (existingNote) {
+  ensureTodayDailyNote: (noteDate) => {
+    if (get().dailyNotes.some((note) => note.noteDate === noteDate)) {
       return;
     }
 
-    try {
-      const result = await createDailyNote();
+    // Never queue a second create for the same day.
+    const alreadyQueued = get().outbox.some(
+      (op) => op.type === 'daily.create' && op.noteDate === noteDate,
+    );
 
-      const dailyNote = result.data?.dailyNote;
+    if (alreadyQueued) return;
 
-      if (!dailyNote) {
-        throw new Error('Failed to create daily note');
-      }
+    const op = {
+      type: 'daily.create' as const,
+      localId: newId(),
+      noteDate,
+    };
 
-      get().upsertDailyNote(dailyNote);
-    } catch (error) {
-      set({
-        dailyNotesStatus: 'error',
-        dailyNotesError: toUserMessage(
-          error,
-          'Something went wrong while creating today’s daily note.',
-        ),
-      });
-    }
+    get().applyOp(op);
+    void get()
+      .runOrQueue(op)
+      .catch((error) => get().rollbackOp(op, error));
+  },
+
+  replaceDailyNotes: (dailyNotes) => {
+    set({ dailyNotes: sortDailyNotes(dailyNotes) });
   },
 
   upsertDailyNote: (dailyNote) => {

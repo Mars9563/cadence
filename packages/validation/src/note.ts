@@ -24,11 +24,22 @@ export const dailyNoteIdParamsSchema = z.object({
   id: uuidSchema,
 });
 
+/**
+ * Body of POST /daily-notes/create. The date is always decided by the server
+ * (app_today); the client may only suggest the row id it already uses locally.
+ */
+export const createTodayDailyNoteSchema = z.object({
+  id: uuidSchema.optional(),
+});
+
 /* ============================================================================
  * GENERAL NOTES
  * ========================================================================== */
 
 export const createNoteSchema = z.object({
+  /** Optional client-generated id; replaying a create is idempotent. */
+  id: uuidSchema.optional(),
+
   folderId: uuidSchema,
 
   title: titleSchema,
@@ -49,6 +60,8 @@ export const noteIdParamsSchema = z.object({
 });
 
 export type CreateDailyNoteInput = z.infer<typeof createDailyNoteSchema>;
+
+export type CreateTodayDailyNoteInput = z.infer<typeof createTodayDailyNoteSchema>;
 
 export type UpdateDailyNoteInput = z.infer<typeof updateDailyNoteSchema>;
 

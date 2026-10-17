@@ -36,11 +36,13 @@ import {
 } from '@/components/ui/tooltip';
 import { cadenceDateToLocalDate } from '@/lib/history';
 import { cn } from '@/lib/utils';
+import { useCadenceToday } from '@/hooks/useCadenceToday';
+import { draftKey } from '@/lib/sync/types';
+import { useCadenceStore } from '@/store/store';
 import {
   useDailyNotes,
-  useIsSocketConnected,
+  useDailyNotesStatus,
   useSetDailyNoteContent,
-  useSocket,
 } from '@/store/selectors';
 
 import { DailyNoteSaveIndicator } from './DailyNoteSaveIndicator';
@@ -94,8 +96,6 @@ const DailyNoteEditor = memo(
     noteDate,
     initialContent: initialContentProp,
   }: DailyNoteEditorProps) {
-    const socket = useSocket();
-    const isSocketConnected = useIsSocketConnected();
     const setDailyNoteContent = useSetDailyNoteContent();
 
     const editorRef = useRef<MDXEditorMethods>(null);
@@ -108,8 +108,6 @@ const DailyNoteEditor = memo(
     const autosave = useDailyNoteAutosave({
       noteId,
       initialContent,
-      socket,
-      isSocketConnected,
       setStoreContent: setDailyNoteContent,
     });
 
@@ -240,22 +238,33 @@ const DailyNoteEditor = memo(
 
 export function DailyNote() {
   const dailyNotes = useDailyNotes();
+  const status = useDailyNotesStatus();
+  const today = useCadenceToday();
 
   /*
-   * The Daily Notes store is already ordered by noteDate.
-   *
-   * For now the first note is today's/current Cadence note.
+   * Today's note. The list is sorted newest first, so if today's has not
+   * been created yet (it is about to be: ensureTodayDailyNote runs at load
+   * and at every day rollover) the most recent one is shown meanwhile.
    */
-  const activeNote = dailyNotes[0] ?? null;
+  const activeNote =
+    dailyNotes.find((note) => note.noteDate === today) ??
+    dailyNotes[0] ??
+    null;
 
-  /*
-   * Daily Notes are still loading.
-   */
+  // Unsaved text from an earlier visit wins over the server copy.
+  const draft = useCadenceStore((s) =>
+    activeNote ? s.drafts[draftKey('daily', activeNote.id)] : undefined,
+  );
+
   if (!activeNote) {
     return (
       <section className="daily-note-shell note-editor-pane">
         <div className="daily-note-loading" role="status">
-          <p>Opening today’s note…</p>
+          <p>
+            {status === 'error'
+              ? 'Your daily notes didn’t load. They will appear when Cadence reconnects.'
+              : 'Opening today’s note…'}
+          </p>
         </div>
       </section>
     );
@@ -266,7 +275,7 @@ export function DailyNote() {
       key={activeNote.id}
       noteId={activeNote.id}
       noteDate={activeNote.noteDate}
-      initialContent={activeNote.content}
+      initialContent={draft?.content ?? activeNote.content}
     />
   );
 }

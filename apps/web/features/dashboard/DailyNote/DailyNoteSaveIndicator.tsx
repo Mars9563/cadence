@@ -46,6 +46,27 @@ export function DailyNoteSaveIndicator({
     );
   }
 
+  if (status === 'offline') {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+        role="status"
+        aria-live="polite"
+        title="Saved on this device. It syncs when you’re back online."
+      >
+        <Orb
+          state="waiting"
+          size={14}
+          speed={0.5}
+          paused
+          label="Saved on this device"
+          className="text-muted-foreground"
+        />
+        On this device
+      </span>
+    );
+  }
+
   if (status === 'error') {
     return (
       <span

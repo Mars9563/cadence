@@ -34,3 +34,21 @@ export function addDays(date: string, days: number): string {
     .toISOString()
     .slice(0, 10);
 }
+
+/**
+ * The instant the Cadence day containing `at` ends: the next calendar date
+ * at `dayEndTime`, Asia/Kolkata. Mirrors the database rule exactly, whatever
+ * the browser's own timezone is.
+ */
+export function getCadenceDayEndInstant(
+  at: Date,
+  dayEndTime: string = DEFAULT_DAY_END_TIME,
+): Date {
+  const [year = 1970, month = 1, day = 1] = getCadenceDate(at, dayEndTime)
+    .split('-')
+    .map(Number);
+
+  const nextMidnightIstAsUtc = Date.UTC(year, month - 1, day + 1);
+
+  return new Date(nextMidnightIstAsUtc + timeToMs(dayEndTime) - IST_OFFSET_MS);
+}

@@ -13,6 +13,7 @@ import {
 
 import { SignOutButton } from '@/features/auth/SignOutButton';
 import { SignOutDialog } from '@/features/auth/SignOutDialog';
+import { SyncStatus } from '@/features/sync/SyncStatus';
 
 import { LayoutDashboard, LogOut, NotebookText, Settings } from 'lucide-react';
 import { MdSpaceDashboard } from 'react-icons/md';
@@ -117,7 +118,9 @@ function CollapsedSidebar() {
         </nav>
 
         {/* Bottom area */}
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col items-center gap-1">
+          <SyncStatus compact />
+
           <RailButton label="Sign out" onClick={() => setSignOutModalOpen(true)}>
             <LogOut className="size-[18px]" />
           </RailButton>
@@ -220,7 +223,9 @@ function ExpandedSidebar() {
         </nav>
 
         {/* Bottom area */}
-        <div className="mt-auto px-2 pb-2">
+        <div className="mt-auto flex flex-col gap-0.5 px-2 pb-2">
+          <SyncStatus />
+
           <SignOutButton />
         </div>
       </aside>

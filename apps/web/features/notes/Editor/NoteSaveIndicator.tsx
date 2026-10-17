@@ -18,7 +18,8 @@ type NoteSaveIndicatorProps = {
 /*
  * Same orb language as the Daily Note indicator, condensed: the orb alone
  * says the state (accent resting = saved, spinning = saving, amber = unsaved,
- * red retrying = failed) and the words live in a tooltip. Tones come from the
+ * muted waiting = stored on this device while offline, red retrying =
+ * failed) and the words live in a tooltip. Tones come from the
  * workspace palette so the indicator stays as quiet as the chrome around it. Only a failure
  * also shows a short label, because it needs attention.
  */
@@ -43,6 +44,13 @@ const LOOK = {
     paused: true,
     tone: 'text-(--cd-warning)',
     label: 'Unsaved changes',
+  },
+  offline: {
+    state: 'waiting',
+    speed: 0.5,
+    paused: true,
+    tone: 'text-muted-foreground',
+    label: 'Saved on this device. It syncs when you’re back online.',
   },
   error: {
     state: 'retrying',
@@ -84,7 +92,8 @@ export function NoteSaveIndicator({ status, error }: NoteSaveIndicatorProps) {
           className={look.tone}
         />
 
-        {status === 'error' && <span>Retrying</span>}
+        {status === 'error' && <span>{error ? 'Not saved' : 'Retrying'}</span>}
+        {status === 'offline' && <span>On this device</span>}
       </TooltipTrigger>
 
       <TooltipContent side="bottom">{label}</TooltipContent>

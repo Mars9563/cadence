@@ -31,6 +31,10 @@ const FOLDER_CLIENT_ERRORS: Record<string, { status: number; message: string }> 
       status: 409,
       message: 'A folder cannot be moved into itself or its own subfolder.',
     },
+    FOLDER_ID_CONFLICT: {
+      status: 409,
+      message: 'A folder with this id already exists.',
+    },
   };
 
 function sendFolderClientError(res: Response, error: unknown) {

@@ -20,6 +20,9 @@ interface ItemRowLayoutProps {
    */
   locked?: boolean;
 
+  /** Why the item cannot be completed right now (shown on the checkbox). */
+  disabledReason?: string;
+
   onCheckedChange?: (checked: boolean) => void;
 }
 
@@ -30,6 +33,7 @@ export function ItemRowLayout({
   checked = false,
   loading = false,
   locked = false,
+  disabledReason,
   onCheckedChange,
 }: ItemRowLayoutProps) {
   return (
@@ -62,7 +66,8 @@ export function ItemRowLayout({
             checked={checked}
             disabled={!onCheckedChange}
             onCheckedChange={onCheckedChange}
-            aria-label={title}
+            aria-label={disabledReason ? `${title} (${disabledReason})` : title}
+            title={disabledReason}
             // The default input border is too faint to find on the canvas.
             className="border-faint-foreground group-hover:border-muted-foreground"
           />

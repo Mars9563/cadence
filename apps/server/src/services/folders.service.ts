@@ -1,6 +1,11 @@
 import type { apiResponse, Folder } from '@cadence/types';
 import type { CreateFolderInput, UpdateFolderInput } from '@cadence/validation';
 
+import {
+  PG_FOREIGN_KEY_VIOLATION,
+  PG_RAISE_EXCEPTION,
+  PG_UNIQUE_VIOLATION,
+} from '../lib/postgres';
 import { createSupabaseClient } from '../supabase/supabase';
 
 type DbFolder = {
@@ -32,8 +37,6 @@ const FOLDER_SELECT = `
  *   P0001 — raise exception. folders_prevent_cycle_trg uses this when a folder
  *           is moved into itself or one of its descendants.
  */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-const PG_RAISE_EXCEPTION = 'P0001';
 
 function mapDbFolderToFrontend(folder: DbFolder): Folder {
   return {
@@ -86,6 +89,7 @@ export async function addFolderByUserId(
   const { data, error } = await supabase
     .from('folders')
     .insert({
+      ...(input.id && { id: input.id }),
       user_id: userId,
       parent_id: input.parentId,
       name: input.name,
@@ -93,6 +97,22 @@ export async function addFolderByUserId(
     })
     .select(FOLDER_SELECT)
     .single();
+
+  // A replayed create (same client id): return the folder that exists.
+  if (error?.code === PG_UNIQUE_VIOLATION && input.id) {
+    const { data: existing } = await supabase
+      .from('folders')
+      .select(FOLDER_SELECT)
+      .eq('id', input.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      return { success: true, data: mapDbFolderToFrontend(existing as DbFolder) };
+    }
+
+    throw new Error('FOLDER_ID_CONFLICT');
+  }
 
   if (error) {
     if (error.code === PG_FOREIGN_KEY_VIOLATION) {

@@ -21,8 +21,10 @@ import {
 import {
   useActiveNoteId,
   useCreateFolder,
+  useFetchNotesTree,
   useFolders,
   useNotes,
+  useNotesStatus,
   useOpenNoteTab,
   useUpdateFolder,
   useUpdateNote,
@@ -59,6 +61,8 @@ export function FileSystemPanel() {
   const folders = useFolders();
   const notes = useNotes();
   const activeNoteId = useActiveNoteId();
+  const notesStatus = useNotesStatus();
+  const fetchNotesTree = useFetchNotesTree();
 
   const openNoteTab = useOpenNoteTab();
   const createFolder = useCreateFolder();
@@ -290,7 +294,32 @@ export function FileSystemPanel() {
           </Tree>
         ) : null}
 
-        {data.length === 0 && (
+        {data.length === 0 && notesStatus === 'error' && (
+          <div
+            role="alert"
+            className="absolute inset-x-0 top-0 flex flex-col items-center gap-3 px-6 pt-10 text-center"
+          >
+            <div className="space-y-1">
+              <p className="text-foreground text-(length:--cd-text-ui) font-medium">
+                Your notes didn’t load
+              </p>
+              <p className="text-muted-foreground text-(length:--cd-text-meta) leading-relaxed">
+                They load again by themselves when Cadence reconnects.
+              </p>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-(length:--cd-text-ui)"
+              onClick={() => void fetchNotesTree()}
+            >
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {data.length === 0 && notesStatus !== 'error' && (
           <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-3 px-6 pt-10 text-center">
             <div className="space-y-1">
               <p className="text-foreground text-(length:--cd-text-ui) font-medium">

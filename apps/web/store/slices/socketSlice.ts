@@ -1,20 +1,21 @@
 import { io, type Socket } from 'socket.io-client';
 import { StateCreator } from 'zustand';
 
-import type { HabitCompletion, NormalItem, TaskItem } from '@cadence/types';
-
+import { BACKEND_URL } from '@/lib/api/request';
 import { createClient } from '@/lib/supabase/client';
 import { getAccessToken } from '@/lib/supabase/accessToken';
 
 import type { CadenceAppStore } from '../types';
 
-const SOCKET_URL = process.env.PUBLIC_BACKEND_URL ?? 'http://localhost:4000';
-
 /**
- * Supabase auth listener that forwards refreshed tokens to the socket.
- * Lives outside the store: it is not state, just a handle to clean up.
+ * Handles that live outside the store: they are not state, just things to
+ * clean up on disconnect.
  */
 let authSubscription: { unsubscribe: () => void } | null = null;
+let removeWindowListeners: (() => void) | null = null;
+
+/** Socket.IO's reconnection gives up on server-initiated disconnects. */
+const SERVER_DISCONNECT_RETRY_MS = 2_000;
 
 export interface socketState {
   socket: Socket | null;
@@ -22,35 +23,12 @@ export interface socketState {
   isSocketConnected: boolean;
   isSocketConnecting: boolean;
 
+  /** True once the first connection succeeded in this page session. */
+  hasEverConnected: boolean;
+
   connectSocket: (token: string) => void;
   disconnectSocket: () => void;
-
-  completeItem: (itemId: string) => void;
 }
-
-type NormalCompletedPayload = {
-  item: NormalItem;
-};
-
-type TaskCompletedPayload = {
-  item: TaskItem;
-};
-
-type HabitCompletedPayload = {
-  completion: HabitCompletion;
-};
-
-type CompletionFailedPayload = {
-  itemId: string;
-  code: string;
-};
-
-type DailyNoteOperationFailedPayload = {
-  operation: 'create' | 'update';
-  noteId?: string;
-  saveId?: number;
-  code: string;
-};
 
 export const CreateSocketSlice: StateCreator<
   CadenceAppStore,
@@ -62,6 +40,7 @@ export const CreateSocketSlice: StateCreator<
 
   isSocketConnected: false,
   isSocketConnecting: false,
+  hasEverConnected: false,
 
   connectSocket: (token) => {
     // Prevent creating multiple socket connections.
@@ -69,9 +48,17 @@ export const CreateSocketSlice: StateCreator<
       return;
     }
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(BACKEND_URL, {
       autoConnect: false,
       withCredentials: true,
+
+      /*
+       * Reconnect forever (with Socket.IO's backoff, capped at 10s): the
+       * app keeps working offline and syncs whenever the server is back.
+       */
+      reconnection: true,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 10_000,
 
       /*
        * A function, not a fixed object: Socket.IO calls it for EVERY
@@ -111,14 +98,39 @@ export const CreateSocketSlice: StateCreator<
     });
 
     socket.on('connect', () => {
+      const isReconnect = get().hasEverConnected;
+
       set({
         isSocketConnected: true,
         isSocketConnecting: false,
+        hasEverConnected: true,
       });
+
+      get().setSessionExpired(false);
+
+      /*
+       * Back online: send everything that waited, then re-read server state
+       * so changes made elsewhere while we were away show up. The first
+       * connection does not reconcile: bootstrap has just loaded the data.
+       */
+      if (isReconnect) {
+        get().requestReconcile();
+      } else {
+        void get().flushSync();
+      }
+    });
+
+    socket.io.on('reconnect_attempt', () => {
+      set({ isSocketConnecting: true });
     });
 
     socket.on('connect_error', (error) => {
       console.error('[Socket] connection error:', error.message);
+
+      // socketAuth rejects an expired or invalid session with this message.
+      if (/invalid or expired|authorization/i.test(error.message)) {
+        get().setSessionExpired(true);
+      }
 
       set({
         isSocketConnected: false,
@@ -131,74 +143,36 @@ export const CreateSocketSlice: StateCreator<
         isSocketConnected: false,
         isSocketConnecting: false,
       });
+
+      // The server closed the connection on purpose (e.g. a restart). The
+      // client does not reconnect by itself in this case.
+      if (reason === 'io server disconnect') {
+        setTimeout(() => {
+          if (get().socket === socket && !socket.connected) socket.connect();
+        }, SERVER_DISCONNECT_RETRY_MS);
+      }
     });
-
-    socket.on('item:normal:completed', ({ item }: NormalCompletedPayload) => {
-      get().updateNormalItem(item);
-
-      get().clearItemCompletionPending(item.id);
-    });
-
-    socket.on('item:task:completed', ({ item }: TaskCompletedPayload) => {
-      get().updateTaskItem(item);
-
-      get().clearItemCompletionPending(item.id);
-    });
-
-    socket.on(
-      'item:habit:completed',
-      ({ completion }: HabitCompletedPayload) => {
-        get().upsertHabitCompletion(completion);
-
-        get().clearItemCompletionPending(completion.itemId);
-      },
-    );
-
-    socket.on(
-      'item:completion:failed',
-      ({ itemId, code }: CompletionFailedPayload) => {
-        console.error('[Socket] item:completion:failed:', {
-          itemId,
-          code,
-        });
-
-        get().clearItemCompletionPending(itemId);
-      },
-    );
 
     /*
-     * ------------------------------------------------------------------------
-     * DAILY NOTES
-     * ------------------------------------------------------------------------
-     *
-     * Creation is intentionally NOT done over Socket.IO.
-     *
-     * AppBootstrap creates the current Daily Note over HTTP if it does not
-     * already exist.
-     *
-     * Socket.IO is only responsible for persisting note content changes.
-     * The server answers with a minimal `daily-note:saved` acknowledgement
-     * ({ noteId, saveId }) that is consumed by `useDailyNoteAutosave`; it is
-     * deliberately NOT written into this store, because the editor owns the
-     * live document while the user is typing.
+     * The browser knows about connectivity before Socket.IO's backoff timer
+     * does: reconnect immediately when the network comes back, and when a
+     * hidden tab becomes visible again (laptop lid, background tab).
      */
+    const reconnectNow = () => {
+      if (get().socket === socket && !socket.connected) socket.connect();
+    };
 
-    socket.on(
-      'daily-note:operation:failed',
-      ({ operation, noteId, saveId, code }: DailyNoteOperationFailedPayload) => {
-        console.error('[Socket] daily-note:operation:failed:', {
-          operation,
-          noteId,
-          saveId,
-          code,
-        });
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') reconnectNow();
+    };
 
-        /*
-         * Save status and retries are handled by `useDailyNoteAutosave`,
-         * which also listens to this event. The local content is retained.
-         */
-      },
-    );
+    removeWindowListeners?.();
+    window.addEventListener('online', reconnectNow);
+    document.addEventListener('visibilitychange', handleVisibility);
+    removeWindowListeners = () => {
+      window.removeEventListener('online', reconnectNow);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
 
     // Put the socket into Zustand before starting the connection.
     set({
@@ -220,37 +194,17 @@ export const CreateSocketSlice: StateCreator<
     authSubscription?.unsubscribe();
     authSubscription = null;
 
+    removeWindowListeners?.();
+    removeWindowListeners = null;
+
     socket.removeAllListeners();
+    socket.io.removeAllListeners();
     socket.disconnect();
 
     set({
       socket: null,
       isSocketConnected: false,
       isSocketConnecting: false,
-    });
-  },
-
-  completeItem: (itemId) => {
-    const socket = get().socket;
-
-    if (!socket) {
-      console.error(
-        '[Socket] Cannot complete item: socket is not initialized.',
-      );
-
-      return;
-    }
-
-    if (!socket.connected) {
-      console.error('[Socket] Cannot complete item: socket is not connected.');
-
-      return;
-    }
-
-    get().markItemCompletionPending(itemId);
-
-    socket.emit('item:complete', {
-      itemId,
     });
   },
 });

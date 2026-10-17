@@ -1,6 +1,7 @@
 import type { apiResponse, Note, NoteSummary } from '@cadence/types';
 import type { CreateNoteInput, UpdateNoteInput } from '@cadence/validation';
 
+import { PG_FOREIGN_KEY_VIOLATION, PG_UNIQUE_VIOLATION } from '../lib/postgres';
 import { createSupabaseClient } from '../supabase/supabase';
 
 type DbNoteSummary = {
@@ -44,7 +45,6 @@ const NOTE_SELECT = `
  * notes_folder_fk is (folder_id, user_id), so a folder that does not exist
  * OR belongs to another user surfaces as a foreign key violation.
  */
-const PG_FOREIGN_KEY_VIOLATION = '23503';
 
 function mapDbNoteSummaryToFrontend(note: DbNoteSummary): NoteSummary {
   return {
@@ -126,6 +126,7 @@ export async function addNoteByUserId(
   const { data, error } = await supabase
     .from('notes')
     .insert({
+      ...(input.id && { id: input.id }),
       user_id: userId,
       folder_id: input.folderId,
       title: input.title,
@@ -133,6 +134,22 @@ export async function addNoteByUserId(
     })
     .select(NOTE_SELECT)
     .single();
+
+  // A replayed create (same client id): return the note that exists.
+  if (error?.code === PG_UNIQUE_VIOLATION && input.id) {
+    const { data: existing } = await supabase
+      .from('notes')
+      .select(NOTE_SELECT)
+      .eq('id', input.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      return { success: true, data: mapDbNoteToFrontend(existing as DbNote) };
+    }
+
+    throw new Error('NOTE_ID_CONFLICT');
+  }
 
   if (error) {
     if (error.code === PG_FOREIGN_KEY_VIOLATION) {

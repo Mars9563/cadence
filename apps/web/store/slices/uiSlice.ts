@@ -10,6 +10,15 @@ export interface uiState {
 
   selectedDate: string | null;
 
+  /**
+   * The first load finished. Never goes back to false in a page session:
+   * the full-screen loader is for the first load only, and losing the
+   * connection later must not unmount the app (or its unsaved editors).
+   */
+  appReady: boolean;
+
+  setAppReady: () => void;
+
   setViewMode: (value: ViewMode) => void;
   setSignOutModalOpen: (command: boolean) => void;
   setCurrentDateTime: (date: Date) => void;
@@ -25,6 +34,10 @@ export const CreateUiSlice: StateCreator<uiState> = (set) => ({
   cadenceDayEnd: null,
 
   selectedDate: null,
+
+  appReady: false,
+
+  setAppReady: () => set({ appReady: true }),
 
   setViewMode: (value) =>
     set({

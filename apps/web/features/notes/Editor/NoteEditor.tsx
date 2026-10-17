@@ -37,7 +37,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useNoteAutosave } from '@/hooks/useNoteAutosave';
+import { isRetryableError } from '@/lib/api/request';
 import { toUserMessage } from '@/lib/errors';
+import { draftKey } from '@/lib/sync/types';
 import { cn } from '@/lib/utils';
 import { useCadenceStore } from '@/store/store';
 import {
@@ -46,7 +48,6 @@ import {
   useNoteSummary,
   useNoteTab,
   useSetNoteContent,
-  useSocket,
   useToggleNoteTabReadOnly,
 } from '@/store/selectors';
 
@@ -55,7 +56,7 @@ import { NoteTitle } from './NoteTitle';
 
 type LoadState =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; offline: boolean }
   | { status: 'ready'; content: string };
 
 /**
@@ -69,15 +70,35 @@ type LoadState =
 export function NoteEditor({ noteId }: { noteId: string }) {
   const setNoteContent = useSetNoteContent();
 
-  const [load, setLoad] = useState<LoadState>(() => {
-    const cached = useCadenceStore.getState().noteContents[noteId];
+  const isSocketConnected = useIsSocketConnected();
 
-    return cached === undefined
-      ? { status: 'loading' }
-      : { status: 'ready', content: cached };
+  const [load, setLoad] = useState<LoadState>(() => {
+    const state = useCadenceStore.getState();
+
+    // Newest first: unsaved text, then this session's copy.
+    const draft = state.drafts[draftKey('note', noteId)];
+
+    if (draft) return { status: 'ready', content: draft.content };
+
+    const cached = state.noteContents[noteId];
+
+    if (cached !== undefined) return { status: 'ready', content: cached };
+
+    // Created offline and not on the server yet: it is empty by definition.
+    const pendingCreate = state.outbox.some(
+      (op) => op.type === 'note.create' && op.input.id === noteId,
+    );
+
+    if (pendingCreate) return { status: 'ready', content: '' };
+
+    return { status: 'loading' };
   });
 
   const [attempt, setAttempt] = useState(0);
+
+  // Opened while offline: fetch again by itself once the connection is back.
+  const retryOnReconnect =
+    load.status === 'error' && load.offline && isSocketConnected;
 
   useEffect(() => {
     if (load.status === 'ready') return;
@@ -98,16 +119,20 @@ export function NoteEditor({ noteId }: { noteId: string }) {
 
         setLoad({
           status: 'error',
-          message: toUserMessage(error, 'Could not open this note.'),
+          offline: isRetryableError(error),
+          message: isRetryableError(error)
+            ? 'This note opens when Cadence is back online.'
+            : toUserMessage(error, 'Could not open this note.'),
         });
       });
 
     return () => {
       cancelled = true;
     };
-    // `attempt` re-runs the fetch for "Try again".
+    // `attempt` re-runs the fetch for "Try again", `retryOnReconnect` when
+    // the connection returns.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, attempt]);
+  }, [noteId, attempt, retryOnReconnect]);
 
   if (load.status === 'loading') {
     return (
@@ -126,7 +151,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
       >
         <div className="space-y-1">
           <p className="text-foreground text-(length:--cd-text-control) font-medium">
-            This note didn’t open
+            {load.offline ? 'You’re offline' : 'This note didn’t open'}
           </p>
           <p className="text-muted-foreground text-(length:--cd-text-ui)">{load.message}</p>
         </div>
@@ -160,8 +185,6 @@ const NoteEditorBody = memo(
     noteId,
     initialContent: initialContentProp,
   }: NoteEditorBodyProps) {
-    const socket = useSocket();
-    const isSocketConnected = useIsSocketConnected();
     const setNoteContent = useSetNoteContent();
 
     const note = useNoteSummary(noteId);
@@ -177,8 +200,6 @@ const NoteEditorBody = memo(
     const autosave = useNoteAutosave({
       noteId,
       initialContent,
-      socket,
-      isSocketConnected,
       setStoreContent: setNoteContent,
     });
 

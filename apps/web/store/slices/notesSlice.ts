@@ -6,18 +6,12 @@ import type {
   UpdateFolderInput,
 } from '@cadence/validation';
 
-import { createFolder as requestCreateFolder } from '@/api/createFolder';
-import { createNote as requestCreateNote } from '@/api/createNote';
-import { deleteFolder as requestDeleteFolder } from '@/api/deleteFolder';
-import { deleteNote as requestDeleteNote } from '@/api/deleteNote';
 import { getFolders } from '@/api/getFolders';
 import { getNotes } from '@/api/getNotes';
-import { updateFolder as requestUpdateFolder } from '@/api/updateFolder';
-import {
-  updateNote as requestUpdateNote,
-  type UpdateNoteDetailsInput,
-} from '@/api/updateNote';
+import type { UpdateNoteDetailsInput } from '@/api/updateNote';
 import { toUserMessage } from '@/lib/errors';
+import type { NewSyncOp } from '@/lib/sync/types';
+import { newId } from '@/lib/uuid';
 
 import type { CadenceAppStore } from '../types';
 
@@ -42,28 +36,26 @@ export interface notesState {
    */
   fetchNotesTree: () => Promise<void>;
 
-  /**
-   * Create on the server, then insert into local state.
-   * Throws on failure so the caller can report it.
+  /*
+   * Every tree change is OPTIMISTIC and goes through the sync engine:
+   * local state changes first so the tree reacts instantly, then the change
+   * is sent (online) or queued (offline). Creates use a client id, so a
+   * folder or note made offline can be renamed, moved, filled or used as a
+   * parent right away. If the server refuses, the change is undone and the
+   * promise rejects so the caller can report it.
    */
-  createFolder: (input: CreateFolderInput) => Promise<Folder>;
-  createNote: (input: CreateNoteInput) => Promise<NoteSummary>;
+  createFolder: (input: Omit<CreateFolderInput, 'id'>) => Promise<Folder>;
+  createNote: (input: Omit<CreateNoteInput, 'id'>) => Promise<NoteSummary>;
 
-  /**
-   * Rename and/or move, OPTIMISTICALLY: local state changes first so the
-   * tree reacts instantly, then the server is asked. If the server
-   * refuses, the previous version is restored and the error is rethrown.
-   */
   updateFolder: (folderId: string, input: UpdateFolderInput) => Promise<void>;
   updateNote: (noteId: string, input: UpdateNoteDetailsInput) => Promise<void>;
 
-  /**
-   * Delete on the server FIRST, then remove locally (not optimistic:
-   * a delete that silently comes back would be more confusing than a
-   * short wait). Deleting a folder also removes its whole subtree.
-   */
+  /** Deleting a folder also removes its whole subtree. */
   deleteFolder: (folderId: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
+
+  /** Replace folders and notes with server data (reconcile). */
+  replaceNotesTree: (folders: Folder[], notes: NoteSummary[]) => void;
 
   /**
    * Insert or replace a folder (create, rename, move).
@@ -191,37 +183,39 @@ export const CreateNotesSlice: StateCreator<
   },
 
   createFolder: async (input) => {
-    const folder = (await requestCreateFolder(input)).data;
+    const op: NewSyncOp = {
+      type: 'folder.create',
+      input: { ...input, id: newId() },
+    };
 
-    if (!folder) {
-      throw new Error('Failed to create folder');
+    get().applyOp(op);
+
+    try {
+      await get().runOrQueue(op);
+    } catch (error) {
+      get().removeFolder(op.input.id);
+      throw error;
     }
 
-    get().upsertFolder(folder);
-
-    return folder;
+    return get().folders.find((folder) => folder.id === op.input.id)!;
   },
 
   createNote: async (input) => {
-    const note = (await requestCreateNote(input)).data;
-
-    if (!note) {
-      throw new Error('Failed to create note');
-    }
-
-    // The store holds summaries only; content belongs to the editor.
-    const summary: NoteSummary = {
-      id: note.id,
-      userId: note.userId,
-      folderId: note.folderId,
-      title: note.title,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
+    const op: NewSyncOp = {
+      type: 'note.create',
+      input: { ...input, id: newId() },
     };
 
-    get().upsertNote(summary);
+    get().applyOp(op);
 
-    return summary;
+    try {
+      await get().runOrQueue(op);
+    } catch (error) {
+      get().removeNote(op.input.id);
+      throw error;
+    }
+
+    return get().notes.find((note) => note.id === op.input.id)!;
   },
 
   updateFolder: async (folderId, input) => {
@@ -231,23 +225,14 @@ export const CreateNotesSlice: StateCreator<
       throw new Error('FOLDER_NOT_FOUND');
     }
 
-    get().upsertFolder({
-      ...previous,
-      ...(input.name !== undefined && { name: input.name }),
-      ...(input.parentId !== undefined && { parentId: input.parentId }),
-    });
+    const op: NewSyncOp = { type: 'folder.update', folderId, input };
+
+    get().applyOp(op);
 
     try {
-      const folder = (await requestUpdateFolder(folderId, input)).data;
-
-      if (!folder) {
-        throw new Error('Failed to update folder');
-      }
-
-      get().upsertFolder(folder);
+      await get().runOrQueue(op);
     } catch (error) {
       get().upsertFolder(previous);
-
       throw error;
     }
   },
@@ -259,37 +244,75 @@ export const CreateNotesSlice: StateCreator<
       throw new Error('NOTE_NOT_FOUND');
     }
 
-    get().upsertNote({
-      ...previous,
-      ...(input.title !== undefined && { title: input.title }),
-      ...(input.folderId !== undefined && { folderId: input.folderId }),
-    });
+    const op: NewSyncOp = { type: 'note.update', noteId, input };
+
+    get().applyOp(op);
 
     try {
-      const note = (await requestUpdateNote(noteId, input)).data;
-
-      if (!note) {
-        throw new Error('Failed to update note');
-      }
-
-      get().upsertNote(note);
+      await get().runOrQueue(op);
     } catch (error) {
       get().upsertNote(previous);
-
       throw error;
     }
   },
 
   deleteFolder: async (folderId) => {
-    await requestDeleteFolder(folderId);
+    const { folders, notes } = get();
 
-    get().removeFolder(folderId);
+    // Snapshot for undo, and the notes whose unsaved text goes with them.
+    const subtree = collectFolderSubtreeIds(folders, folderId);
+    const removedFolders = folders.filter((folder) => subtree.has(folder.id));
+    const removedNotes = notes.filter((note) => subtree.has(note.folderId));
+
+    const op: NewSyncOp = { type: 'folder.delete', folderId };
+
+    get().applyOp(op);
+    get().discardDrafts(
+      'note',
+      removedNotes.map((note) => note.id),
+    );
+
+    try {
+      await get().runOrQueue(op);
+    } catch (error) {
+      for (const folder of removedFolders) get().upsertFolder(folder);
+      for (const note of removedNotes) get().upsertNote(note);
+      throw error;
+    }
   },
 
   deleteNote: async (noteId) => {
-    await requestDeleteNote(noteId);
+    const previous = get().notes.find((note) => note.id === noteId);
+    const op: NewSyncOp = { type: 'note.delete', noteId };
 
-    get().removeNote(noteId);
+    get().applyOp(op);
+    get().discardDrafts('note', [noteId]);
+
+    try {
+      await get().runOrQueue(op);
+    } catch (error) {
+      if (previous) get().upsertNote(previous);
+      throw error;
+    }
+  },
+
+  replaceNotesTree: (folders, notes) => {
+    const noteIds = new Set(notes.map((note) => note.id));
+    const missing = new Set(
+      get()
+        .notes.map((note) => note.id)
+        .filter((id) => !noteIds.has(id)),
+    );
+
+    set({ folders, notes });
+
+    // Notes deleted elsewhere: close their tabs, forget their cache.
+    if (missing.size > 0) get().closeNoteTabsFor(missing);
+
+    // Cached content of notes that are not open may be stale now; drop it
+    // so the next open fetches the server version. Open editors and unsaved
+    // drafts keep theirs.
+    get().pruneNoteContents();
   },
 
   upsertFolder: (folder) => {

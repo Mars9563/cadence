@@ -53,6 +53,9 @@ export interface noteTabsState {
 
   clearTitleFocusRequest: () => void;
 
+  /** Drop cached content of notes that are neither open nor unsaved. */
+  pruneNoteContents: () => void;
+
   /**
    * Restore the tabs saved in this browser, dropping any whose note no
    * longer exists. Runs once, after notes and the profile have loaded.
@@ -213,6 +216,21 @@ export const CreateNoteTabsSlice: StateCreator<
 
     clearTitleFocusRequest: () => {
       set({ titleFocusNoteId: null });
+    },
+
+    pruneNoteContents: () => {
+      set((state) => {
+        const open = new Set(state.noteTabs.map((tab) => tab.noteId));
+        const noteContents: Record<string, string> = {};
+
+        for (const [id, content] of Object.entries(state.noteContents)) {
+          if (open.has(id) || state.drafts[`note:${id}`]) {
+            noteContents[id] = content;
+          }
+        }
+
+        return { noteContents };
+      });
     },
 
     restoreNoteTabs: () => {

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 
 import {
+  createTodayDailyNoteSchema,
   dailyNoteIdParamsSchema,
   updateDailyNoteSchema,
 } from '@cadence/validation';
@@ -43,14 +44,28 @@ export async function createDailyNote(req: Request, res: Response) {
     }
 
     /*
-     * Creation intentionally accepts NO client data.
-     *
-     * The service determines:
+     * The only client data accepted is an optional row id (the id the
+     * client already uses locally). The service determines:
      *   - user_id from authentication
      *   - note_date from app_today()
      *   - content as ''
+     * and returns the existing note if today's already exists.
      */
-    const dailyNote = await addDailyNoteByUserId(req.userId, req.userJWT);
+    const body = createTodayDailyNoteSchema.safeParse(req.body ?? {});
+
+    if (!body.success) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid daily note data.',
+        details: body.error.flatten(),
+      });
+    }
+
+    const dailyNote = await addDailyNoteByUserId(
+      req.userId,
+      req.userJWT,
+      body.data.id,
+    );
 
     return res.status(201).json(dailyNote);
   } catch (error) {
@@ -116,6 +131,13 @@ export async function updateDailyNote(req: Request, res: Response) {
 
     return res.status(200).json(result);
   } catch (error) {
+    if (error instanceof Error && error.message === 'DAILY_NOTE_NOT_FOUND') {
+      return res.status(404).json({
+        error: 'DAILY_NOTE_NOT_FOUND',
+        message: 'Daily note not found.',
+      });
+    }
+
     console.error('Update daily note controller error:', error);
 
     return res.status(500).json({

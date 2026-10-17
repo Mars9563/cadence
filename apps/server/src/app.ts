@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
@@ -9,13 +9,22 @@ import habitCompletionsRoute from './routes/habit-completions.route';
 import dailyNotesRoute from './routes/daily-notes.route'
 import foldersRoute from './routes/folders.route';
 import notesRoute from './routes/notes.route';
+/*
+ * Allowed browser origin(s) for REST and Socket.IO. Comma-separated list in
+ * CORS_ORIGIN; defaults to the local Next.js dev server.
+ */
+export const CORS_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 export const app = express();
 
 app.use(helmet());
 
 app.use(
   cors({
-    origin: 'http://localhost:3000',
+    origin: CORS_ORIGINS,
   }),
 );
 

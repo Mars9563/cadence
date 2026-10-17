@@ -12,6 +12,34 @@ import {
   getItemsByUserId,
 } from '../services/items.service';
 
+/*
+ * Service error codes that are the client's fault rather than the server's.
+ * Anything not listed here is reported as a 500.
+ */
+const ITEM_CLIENT_ERRORS: Record<string, { status: number; message: string }> = {
+  ITEM_LOCKED: {
+    status: 422,
+    message: 'That day has already passed, so this item can no longer change.',
+  },
+  ITEM_ID_CONFLICT: {
+    status: 409,
+    message: 'An item with this id already exists.',
+  },
+};
+
+function sendItemClientError(res: Response, error: unknown) {
+  const code = error instanceof Error ? error.message : '';
+  const clientError = ITEM_CLIENT_ERRORS[code];
+
+  if (!clientError) return null;
+
+  return res.status(clientError.status).json({
+    success: false,
+    error: code,
+    message: clientError.message,
+  });
+}
+
 export async function getItems(req: Request, res: Response) {
   try {
     if (!req.userId || !req.userJWT) {
@@ -61,6 +89,9 @@ export async function addNormalItem(req: Request, res: Response) {
 
     return res.status(201).json(item);
   } catch (error) {
+    const handled = sendItemClientError(res, error);
+    if (handled) return handled;
+
     console.error('Add normal item controller error:', error);
 
     return res.status(500).json({
@@ -97,6 +128,9 @@ export async function addTaskItem(req: Request, res: Response) {
 
     return res.status(201).json(item);
   } catch (error) {
+    const handled = sendItemClientError(res, error);
+    if (handled) return handled;
+
     console.error('Add task item controller error:', error);
 
     return res.status(500).json({
@@ -133,6 +167,9 @@ export async function addHabitItem(req: Request, res: Response) {
 
     return res.status(201).json(item);
   } catch (error) {
+    const handled = sendItemClientError(res, error);
+    if (handled) return handled;
+
     console.error('Add habit item controller error:', error);
 
     return res.status(500).json({

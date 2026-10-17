@@ -1,11 +1,11 @@
 import { Server } from 'socket.io';
-import { httpServer } from '../app';
+import { CORS_ORIGINS, httpServer } from '../app';
 import { socketAuth } from './middleware/auth';
 import { registerSocketHandlers } from './handlers/connection.handler';
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: CORS_ORIGINS,
     credentials: true,
   },
 });

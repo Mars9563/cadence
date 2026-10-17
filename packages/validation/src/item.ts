@@ -15,6 +15,18 @@ const baseItemFields = {
   description: descriptionSchema,
 };
 
+/**
+ * Optional client-generated id for creates.
+ *
+ * The web client creates rows optimistically (and while offline) under an id
+ * it generated itself, then replays the request until the server confirms.
+ * Sending the same id again is idempotent: the server returns the existing
+ * row instead of inserting a duplicate.
+ */
+const clientIdField = {
+  id: uuidSchema.optional(),
+};
+
 /* ============================================================================
  * CREATE
  * ========================================================================== */
@@ -22,11 +34,15 @@ const baseItemFields = {
 export const createNormalItemSchema = z.object({
   kind: z.literal('normal'),
 
+  ...clientIdField,
+
   ...baseItemFields,
 });
 
 export const createTaskItemSchema = z.object({
   kind: z.literal('task'),
+
+  ...clientIdField,
 
   ...baseItemFields,
 
@@ -37,6 +53,8 @@ export const createTaskItemSchema = z.object({
 
 export const createHabitItemSchema = z.object({
   kind: z.literal('habit'),
+
+  ...clientIdField,
 
   ...baseItemFields,
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { apiResponse, NoteSummary } from '@cadence/types';
-import { UpdateNoteInput } from '@cadence/validation';
+import type { NoteSummary, apiResponse } from '@cadence/types';
+import type { UpdateNoteInput } from '@cadence/validation';
 
-import { getAccessToken } from '@/lib/supabase/accessToken';
+import { apiRequest } from '@/lib/api/request';
 
 /**
  * Rename (title) and/or move (folderId) a note.
@@ -12,33 +12,10 @@ import { getAccessToken } from '@/lib/supabase/accessToken';
  */
 export type UpdateNoteDetailsInput = Omit<UpdateNoteInput, 'content'>;
 
-export async function updateNote(
-  noteId: string,
-  input: UpdateNoteDetailsInput,
-): Promise<apiResponse<NoteSummary>> {
-  const token = await getAccessToken();
-
-  if (!token) {
-    throw new Error('Not Authenticated');
-  }
-
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/notes/${noteId}`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(input),
-    },
+export function updateNote(noteId: string, input: UpdateNoteDetailsInput) {
+  return apiRequest<apiResponse<NoteSummary>>(
+    'PATCH',
+    `/notes/${noteId}`,
+    input,
   );
-
-  const result: apiResponse<NoteSummary> = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.error ?? 'Failed to update note');
-  }
-
-  return result;
 }

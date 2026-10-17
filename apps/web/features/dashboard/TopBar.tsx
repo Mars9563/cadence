@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   useIsSocketConnected,
   useIsSocketConnecting,
+  useIsSyncing,
   useUser,
 } from '@/store/selectors';
 
@@ -69,6 +70,7 @@ export function TopBar() {
 
   const isSocketConnected = useIsSocketConnected();
   const isSocketConnecting = useIsSocketConnecting();
+  const isSyncing = useIsSyncing();
 
   const name = getUserName(user?.displayName, user?.email);
   const initials = getInitials(user?.displayName, user?.email);
@@ -79,10 +81,12 @@ export function TopBar() {
       ? 'base'
       : 'retrying';
 
-  const connectionLabel = isSocketConnecting
-    ? 'Syncing'
-    : isSocketConnected
-      ? 'Live'
+  const connectionLabel = isSocketConnected
+    ? isSyncing
+      ? 'Syncing'
+      : 'Live'
+    : isSocketConnecting
+      ? 'Reconnecting'
       : 'Offline';
 
   return (

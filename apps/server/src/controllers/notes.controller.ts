@@ -34,6 +34,10 @@ const NOTE_CLIENT_ERRORS: Record<string, { status: number; message: string }> =
       status: 404,
       message: 'Folder not found.',
     },
+    NOTE_ID_CONFLICT: {
+      status: 409,
+      message: 'A note with this id already exists.',
+    },
   };
 
 function sendNoteClientError(res: Response, error: unknown) {

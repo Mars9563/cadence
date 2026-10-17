@@ -1,206 +1,185 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { getProfile } from '@/api/profile';
+import { ApiError, isRetryableError } from '@/lib/api/request';
+import { getCadenceDate } from '@/lib/cadenceDate';
 import { getCadenceDayEnd } from '@/lib/cadenceDay';
+import { toUserMessage } from '@/lib/errors';
+import { hardNavigate } from '@/lib/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useCadenceStore } from '@/store/store';
+import { useAppReady, useDisconnectSocket } from '@/store/selectors';
 
-import {
-  useConnectSocket,
-  useDisconnectSocket,
-  useEnsureTodayDailyNote,
-  useFetchDailyNotes,
-  useFetchHabitCompletions,
-  useFetchItems,
-  useFetchNotesTree,
-  useHabitCompletionsStatus,
-  useIsSocketConnected,
-  useItemsStatus,
-  useSetCadenceDayEnd,
-  useSetCurrentDateTime,
-  useSetUser,
-  useUser,
-  useDailyNotesStatus,
-  useNotesStatus,
-} from '@/store/selectors';
-import { LoadingScreen } from './LoadingScreen/loadingScreen';
+import { AppClock } from './AppClock';
+import { LoadingScreen, type LoadPhase } from './LoadingScreen/loadingScreen';
 
 interface AppBootstrapProps {
   children: ReactNode;
 }
 
+/** How long the loader takes to hand over to the app (matches its CSS). */
+const LOADER_EXIT_MS = 450;
+
 /**
- * Returns the current Cadence date for the given instant.
+ * Loads everything the first screen needs, once per page session.
  *
- * Cadence uses:
+ *   session  -> Supabase session (else: sign-in page); socket starts
+ *   profile  -> the user's day boundary; nothing works without it
+ *   data     -> items, habit completions, notes tree, daily notes
+ *   sync     -> this device's unsynced changes are laid over the data and
+ *               sent; today's Daily Note is ensured
  *
- *   Asia/Kolkata
- *   minus the user's day_end_time
+ * The full-screen loader exists only until the first successful load
+ * (`appReady`). After that the app never unmounts for connectivity: losing
+ * the connection shows a status, editing continues, and changes sync when
+ * the socket reconnects (store/slices/syncSlice).
  *
- * and then takes the calendar date.
- *
- * This mirrors the database's app_today() calculation.
+ * A failed collection (say, items) does not block the app; its section shows
+ * the error and the next reconnect re-reads it. Only the profile is
+ * required. Offline at first load: the loader says so and retries by itself
+ * when the browser reports the network back.
  */
-function getCurrentCadenceDate(now: Date, dayEndTime: string): string {
-  const [hours = '0', minutes = '0', seconds = '0'] = dayEndTime.split(':');
-
-  const boundarySeconds =
-    Number(hours) * 60 * 60 + Number(minutes) * 60 + Number(seconds);
-
-  const istDateParts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-
-  const parts = Object.fromEntries(
-    istDateParts.map(({ type, value }) => [type, value]),
-  );
-
-  const year = Number(parts.year);
-  const month = Number(parts.month);
-  const day = Number(parts.day);
-  const hour = Number(parts.hour);
-  const minute = Number(parts.minute);
-  const second = Number(parts.second);
-
-  const currentSeconds = hour * 60 * 60 + minute * 60 + second;
-
-  /*
-   * Build the calendar date in UTC so that date arithmetic is independent
-   * from the browser's local timezone.
-   */
-  const cadenceDate = new Date(Date.UTC(year, month - 1, day));
-
-  if (currentSeconds < boundarySeconds) {
-    cadenceDate.setUTCDate(cadenceDate.getUTCDate() - 1);
-  }
-
-  return cadenceDate.toISOString().slice(0, 10);
-}
-
 export function AppBootstrap({ children }: AppBootstrapProps) {
-  const user = useUser();
-
-  const itemsStatus = useItemsStatus();
-  const habitCompletionsStatus = useHabitCompletionsStatus();
-  const dailyNotesStatus = useDailyNotesStatus();
-  const notesStatus = useNotesStatus();
-
-  const isSocketConnected = useIsSocketConnected();
-
-  const setUser = useSetUser();
-  const setCurrentDateTime = useSetCurrentDateTime();
-  const setCadenceDayEnd = useSetCadenceDayEnd();
-
-  const fetchItems = useFetchItems();
-  const fetchHabitCompletions = useFetchHabitCompletions();
-
-  const fetchDailyNotes = useFetchDailyNotes();
-  const ensureTodayDailyNote = useEnsureTodayDailyNote();
-
-  const fetchNotesTree = useFetchNotesTree();
-
-  const connectSocket = useConnectSocket();
+  const appReady = useAppReady();
   const disconnectSocket = useDisconnectSocket();
 
+  const [phase, setPhase] = useState<LoadPhase>({ kind: 'step', step: 'session' });
+  const [attempt, setAttempt] = useState(0);
+  const [loaderMounted, setLoaderMounted] = useState(!appReady);
+
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
+  // The socket lives for the whole page session, across load retries.
+  const socketStartedRef = useRef(false);
+
+  useEffect(() => () => disconnectSocket(), [disconnectSocket]);
+
   useEffect(() => {
+    if (useCadenceStore.getState().appReady) return;
+
     let cancelled = false;
+    const store = () => useCadenceStore.getState();
 
-    async function loadProfile() {
-      const profile = await getProfile();
+    async function load() {
+      // 1. Session.
+      setPhase({ kind: 'step', step: 'session' });
 
-      if (cancelled) {
+      const { data } = await createClient().auth.getSession();
+      const token = data.session?.access_token;
+
+      if (cancelled) return;
+
+      if (!token) {
+        hardNavigate('/auth/sign-in');
         return;
       }
+
+      if (!socketStartedRef.current) {
+        socketStartedRef.current = true;
+        store().connectSocket(token);
+      }
+
+      // 2. Profile (required).
+      setPhase({ kind: 'step', step: 'profile' });
+
+      const profile = await getProfile();
+
+      if (cancelled) return;
 
       const now = new Date();
 
-      setCurrentDateTime(now);
-      setUser(profile);
-      setCadenceDayEnd(getCadenceDayEnd(now, profile.dayEndTime));
+      store().setCurrentDateTime(now);
+      store().setUser(profile);
+      store().setCadenceDayEnd(getCadenceDayEnd(now, profile.dayEndTime));
 
-      /*
-       * Daily Notes depend on the user's Cadence date,
-       * which depends on their profile day_end_time.
-       *
-       * Therefore we don't attempt to ensure today's note
-       * until the profile has loaded.
-       */
-      await fetchDailyNotes();
+      // 3. Data. Each fetch records its own error; none of them throws.
+      setPhase({ kind: 'step', step: 'data' });
 
-      if (cancelled) {
+      await Promise.all([
+        store().fetchItems(),
+        store().fetchHabitCompletions(),
+        store().fetchNotesTree(),
+        store().fetchDailyNotes(),
+      ]);
+
+      if (cancelled) return;
+
+      // 4. This device's pending changes, then today's note.
+      setPhase({ kind: 'step', step: 'sync' });
+
+      store().loadSync(profile.id);
+      store().ensureTodayDailyNote(getCadenceDate(now, profile.dayEndTime));
+
+      setPhase({ kind: 'step', step: 'done' });
+      store().setAppReady();
+    }
+
+    load().catch((error: unknown) => {
+      if (cancelled) return;
+
+      // No session, or the server rejected it: sign in again.
+      if (error instanceof ApiError && error.status === 401) {
+        hardNavigate('/auth/sign-in');
         return;
       }
 
-      const currentCadenceDate = getCurrentCadenceDate(now, profile.dayEndTime);
-
-      await ensureTodayDailyNote(currentCadenceDate);
-    }
-
-    async function connectSockets() {
-      const supabase = createClient();
-
-      const { data } = await supabase.auth.getSession();
-
-      const token = data.session?.access_token;
-
-      if (token && !cancelled) {
-        connectSocket(token);
+      if (isRetryableError(error)) {
+        setPhase({ kind: 'offline' });
+        return;
       }
-    }
 
-    // Load application data.
-    void fetchItems();
-    void fetchHabitCompletions();
-
-    // Load folders + note summaries (no note content).
-    void fetchNotesTree();
-
-    // Load profile + Daily Notes.
-    void loadProfile();
-
-    // Start socket connection.
-    void connectSockets();
+      setPhase({
+        kind: 'error',
+        message: toUserMessage(error, 'Cadence couldn’t load your account.'),
+      });
+    });
 
     return () => {
       cancelled = true;
-      disconnectSocket();
     };
-  }, [
-    setUser,
-    setCurrentDateTime,
-    setCadenceDayEnd,
-    fetchItems,
-    fetchHabitCompletions,
-    fetchDailyNotes,
-    ensureTodayDailyNote,
-    fetchNotesTree,
-    connectSocket,
-    disconnectSocket,
-  ]);
+  }, [attempt]);
 
-  /*
-   * Do not render the actual application until everything
-   * required for the first screen is ready.
-   */
-  const isAppReady =
-    user !== null &&
-    itemsStatus === 'ready' &&
-    habitCompletionsStatus === 'ready' &&
-    dailyNotesStatus === 'ready' &&
-    notesStatus === 'ready' &&
-    isSocketConnected;
+  // Offline at first load: try again the moment the network is back.
+  useEffect(() => {
+    if (phase.kind !== 'offline') return;
 
-  if (!isAppReady) {
-    return <LoadingScreen />;
-  }
+    const timer = setInterval(retry, 15_000);
 
-  return <>{children}</>;
+    window.addEventListener('online', retry);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('online', retry);
+    };
+  }, [phase.kind, retry]);
+
+  // Hand over: keep the loader on top briefly while it fades out.
+  useEffect(() => {
+    if (!appReady || !loaderMounted) return;
+
+    const timer = setTimeout(() => setLoaderMounted(false), LOADER_EXIT_MS);
+
+    return () => clearTimeout(timer);
+  }, [appReady, loaderMounted]);
+
+  return (
+    <>
+      {appReady ? (
+        <>
+          <AppClock />
+          {children}
+        </>
+      ) : null}
+
+      {loaderMounted ? (
+        <LoadingScreen
+          phase={appReady ? { kind: 'step', step: 'done' } : phase}
+          exiting={appReady}
+          onRetry={retry}
+        />
+      ) : null}
+    </>
+  );
 }

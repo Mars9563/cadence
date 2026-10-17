@@ -239,3 +239,35 @@ export const useClearTitleFocusRequest = () =>
 
 export const useRestoreNoteTabs = () =>
   useCadenceStore((s) => s.restoreNoteTabs);
+
+// sync selectors ----
+
+export const useHasEverConnected = () =>
+  useCadenceStore((s) => s.hasEverConnected);
+
+export const useOutboxCount = () => useCadenceStore((s) => s.outbox.length);
+
+export const useDraftCount = () =>
+  useCadenceStore((s) => Object.keys(s.drafts).length);
+
+export const useIsSyncing = () => useCadenceStore((s) => s.isSyncing);
+
+export const useSyncRetryAt = () => useCadenceStore((s) => s.syncRetryAt);
+
+export const useSyncStorageFailed = () =>
+  useCadenceStore((s) => s.syncStorageFailed);
+
+export const useSessionExpired = () => useCadenceStore((s) => s.sessionExpired);
+
+export const useFlushSync = () => useCadenceStore((s) => s.flushSync);
+
+export const useLoadSync = () => useCadenceStore((s) => s.loadSync);
+
+export const useSaveDraft = () => useCadenceStore((s) => s.saveDraft);
+
+export const useDraft = (key: string) =>
+  useCadenceStore((s) => s.drafts[key]);
+
+export const useAppReady = () => useCadenceStore((s) => s.appReady);
+
+export const useSetAppReady = () => useCadenceStore((s) => s.setAppReady);

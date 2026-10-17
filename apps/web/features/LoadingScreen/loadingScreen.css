@@ -1,0 +1,131 @@
+/* ==========================================================================
+   First-load screen
+   ========================================================================== */
+
+.cd-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 1.5rem;
+  background: var(--cd-background);
+  color: var(--cd-text-primary);
+  transition:
+    opacity 420ms var(--cd-ease),
+    transform 420ms var(--cd-ease);
+}
+
+/* Hand-over to the app: settle, then fade and lift away. */
+.cd-loader.is-exiting {
+  opacity: 0;
+  transform: scale(1.015);
+  pointer-events: none;
+}
+
+.cd-loader-stage {
+  position: relative;
+  display: grid;
+  width: 340px;
+  max-width: 80vw;
+  aspect-ratio: 1;
+  place-items: center;
+}
+
+.cd-loader-stage > * {
+  grid-area: 1 / 1;
+}
+
+.cd-loader-backdrop {
+  max-width: 100%;
+  color: var(--cd-accent);
+  opacity: 0.08;
+}
+
+.cd-loader-orb {
+  color: var(--cd-accent);
+  transition: color 300ms var(--cd-ease);
+}
+
+.cd-loader-orb.is-offline {
+  color: var(--cd-text-secondary);
+}
+
+.cd-loader-orb.is-error {
+  color: var(--cd-danger);
+}
+
+.cd-loader-copy {
+  display: flex;
+  max-width: 22rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.cd-loader-wordmark {
+  font-family: var(--cd-font-prose);
+  font-optical-sizing: auto;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cd-loader-status {
+  min-height: 1.25rem;
+  color: var(--cd-text-secondary);
+  font-size: var(--cd-text-ui);
+  line-height: 1.5;
+  animation: cd-loader-line 320ms var(--cd-ease) both;
+}
+
+@keyframes cd-loader-line {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Real progress: one dot per loading step. */
+.cd-loader-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.cd-loader-steps li {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--cd-border-subtle);
+  transition:
+    background-color 300ms var(--cd-ease),
+    width 300ms var(--cd-ease);
+}
+
+.cd-loader-steps li[data-state='done'] {
+  background: color-mix(in srgb, var(--cd-accent) 60%, transparent);
+}
+
+.cd-loader-steps li[data-state='current'] {
+  width: 1.25rem;
+  background: var(--cd-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-loader,
+  .cd-loader-status,
+  .cd-loader-steps li {
+    animation: none;
+    transition: none;
+  }
+}

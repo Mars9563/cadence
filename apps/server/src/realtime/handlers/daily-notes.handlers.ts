@@ -3,6 +3,7 @@ import { Socket } from 'socket.io';
 import type { DailyNoteSaveAck } from '@cadence/types';
 
 import {
+  createTodayDailyNoteSchema,
   dailyNoteIdParamsSchema,
   updateDailyNoteSchema,
 } from '@cadence/validation';
@@ -11,6 +12,7 @@ import {
   addDailyNoteByUserId,
   updateDailyNoteById,
 } from '../../services/daily-notes.services';
+import { errorCode, reply } from '../ack';
 
 type UpdateDailyNotePayload = {
   noteId: string;
@@ -30,29 +32,30 @@ export function registerDailyNotesHandlers(
    */
   socket.on(
     'daily-note:create',
-    async () => {
+    async (payload: unknown, ack?: unknown) => {
       try {
+        const body = createTodayDailyNoteSchema.safeParse(payload ?? {});
+
         const result = await addDailyNoteByUserId(
           socket.data.userId,
           socket.data.token,
+          body.success ? body.data.id : undefined,
         );
 
-        socket.emit('daily-note:created', {
-          dailyNote: result.data?.dailyNote,
-        });
+        const dailyNote = result.data?.dailyNote;
+
+        socket.emit('daily-note:created', { dailyNote });
+        reply(ack, { ok: true, data: { dailyNote } });
       } catch (error) {
-        console.error(
-          'Failed to create daily note:',
-          error,
-        );
+        const code = errorCode(error, 'DAILY_NOTE_CREATE_FAILED');
+
+        console.error('Failed to create daily note:', code);
 
         socket.emit('daily-note:operation:failed', {
           operation: 'create',
-          code:
-            error instanceof Error
-              ? error.message
-              : 'DAILY_NOTE_CREATE_FAILED',
+          code,
         });
+        reply(ack, { ok: false, code });
       }
     },
   );
@@ -78,7 +81,7 @@ export function registerDailyNotesHandlers(
    */
   socket.on(
     'daily-note:update',
-    async (payload: UpdateDailyNotePayload) => {
+    async (payload: UpdateDailyNotePayload, ack?: unknown) => {
       const noteId =
         typeof payload?.noteId === 'string' ? payload.noteId : undefined;
 
@@ -94,6 +97,7 @@ export function registerDailyNotesHandlers(
           saveId,
           code,
         });
+        reply(ack, { ok: false, code });
       };
 
       try {
@@ -131,12 +135,13 @@ export function registerDailyNotesHandlers(
           socket.data.token,
         );
 
-        const ack: DailyNoteSaveAck = {
+        const saved: DailyNoteSaveAck = {
           noteId: paramsResult.data.id,
           saveId,
         };
 
-        socket.emit('daily-note:saved', ack);
+        socket.emit('daily-note:saved', saved);
+        reply(ack, { ok: true, data: saved });
       } catch (error) {
         console.error(
           'Failed to update daily note:',
