@@ -271,3 +271,18 @@ export const useDraft = (key: string) =>
 export const useAppReady = () => useCadenceStore((s) => s.appReady);
 
 export const useSetAppReady = () => useCadenceStore((s) => s.setAppReady);
+
+// settings selectors ----
+
+export const useSettingsOpen = () => useCadenceStore((s) => s.settingsOpen);
+
+export const useSettingsSection = () =>
+  useCadenceStore((s) => s.settingsSection);
+
+export const useOpenSettings = () => useCadenceStore((s) => s.openSettings);
+
+export const useSetSettingsOpen = () =>
+  useCadenceStore((s) => s.setSettingsOpen);
+
+export const useSetSettingsSection = () =>
+  useCadenceStore((s) => s.setSettingsSection);

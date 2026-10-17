@@ -1,11 +1,11 @@
 import { StateCreator } from "zustand";
-import { Profile } from '@cadence/types';
+import { ProfileView } from '@cadence/types';
 
 export interface authState{
-    user: Profile | null;
+    user: ProfileView | null;
     isAuthenticated: boolean;
 
-    setUser: (user: Profile) => void;
+    setUser: (user: ProfileView) => void;
     setIsAuthenticated: (value: boolean) => void;
 }
 

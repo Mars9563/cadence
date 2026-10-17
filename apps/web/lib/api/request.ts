@@ -51,7 +51,7 @@ export function errorCodeOf(error: unknown): string | undefined {
   return undefined;
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 

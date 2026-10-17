@@ -4,8 +4,10 @@ import { Orb } from '@yogesharc/thinking-orbs';
 import { squares } from '@yogesharc/thinking-orbs/renders';
 
 import { cn } from '@/lib/utils';
+import { UserAvatar } from '@/features/settings/UserAvatar';
 import {
   useIsSocketConnected,
+  useOpenSettings,
   useIsSocketConnecting,
   useIsSyncing,
   useUser,
@@ -46,7 +48,7 @@ export function getUserName(
   return 'there';
 }
 
-function getInitials(
+export function getInitials(
   displayName: string | null | undefined,
   email: string | null | undefined,
 ): string {
@@ -73,7 +75,7 @@ export function TopBar() {
   const isSyncing = useIsSyncing();
 
   const name = getUserName(user?.displayName, user?.email);
-  const initials = getInitials(user?.displayName, user?.email);
+  const openSettings = useOpenSettings();
 
   const connectionState = isSocketConnecting
     ? 'waiting'
@@ -117,20 +119,19 @@ export function TopBar() {
         <span aria-hidden="true">{connectionLabel}</span>
       </div>
 
-      {/* User */}
-      <div className="flex h-7 min-w-0 items-center gap-2 rounded-md pr-2 pl-1">
-        <div className="bg-surface-raised text-muted-foreground flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-medium">
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="size-full object-cover" />
-          ) : (
-            initials
-          )}
-        </div>
+      {/* User: opens settings on the Profile section */}
+      <button
+        type="button"
+        onClick={() => openSettings('profile')}
+        aria-label="Open settings"
+        className="hover:bg-fill-hover focus-visible:ring-primary/60 flex h-7 min-w-0 items-center gap-2 rounded-md pr-2 pl-1 transition-colors duration-(--cd-duration-fast) outline-none focus-visible:ring-1"
+      >
+        <UserAvatar className="size-6 text-[10px]" />
 
         <span className="text-foreground hidden max-w-32 truncate text-(length:--cd-text-ui) md:block">
           {name}
         </span>
-      </div>
+      </button>
     </div>
   );
 }

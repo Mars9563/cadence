@@ -15,15 +15,16 @@
   "license": "ISC",
   "packageManager": "pnpm@10.33.2",
   "dependencies": {
+    "@cadence/types": "workspace:*",
+    "@cadence/validation": "workspace:*",
     "@supabase/supabase-js": "^2.116.0",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.0",
     "express": "^5.2.1",
     "helmet": "^8.3.0",
     "socket.io": "^4.8.3",
-    "zod": "^4.6.5",
-    "@cadence/types": "workspace:*",
-    "@cadence/validation": "workspace:*"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

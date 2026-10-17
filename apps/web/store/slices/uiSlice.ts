@@ -2,6 +2,8 @@ import { StateCreator } from 'zustand';
 
 export type ViewMode = 'Dashboard' | 'Notes';
 
+export type SettingsSection = 'profile' | 'day' | 'account' | 'sign-out';
+
 export interface uiState {
   ViewMode: ViewMode;
   signOutModalOpen: boolean;
@@ -16,6 +18,14 @@ export interface uiState {
    * connection later must not unmount the app (or its unsaved editors).
    */
   appReady: boolean;
+
+  /** The settings modal: open or not, and which section it shows. */
+  settingsOpen: boolean;
+  settingsSection: SettingsSection;
+
+  openSettings: (section?: SettingsSection) => void;
+  setSettingsOpen: (open: boolean) => void;
+  setSettingsSection: (section: SettingsSection) => void;
 
   setAppReady: () => void;
 
@@ -36,6 +46,19 @@ export const CreateUiSlice: StateCreator<uiState> = (set) => ({
   selectedDate: null,
 
   appReady: false,
+
+  settingsOpen: false,
+  settingsSection: 'profile',
+
+  openSettings: (section) =>
+    set((state) => ({
+      settingsOpen: true,
+      settingsSection: section ?? state.settingsSection,
+    })),
+
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
+
+  setSettingsSection: (section) => set({ settingsSection: section }),
 
   setAppReady: () => set({ appReady: true }),
 

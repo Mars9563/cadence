@@ -215,6 +215,12 @@ html[data-surface='workspace'] [data-slot='tooltip-content'] > div[data-side] {
   display: none;
 }
 
+/* Avatar cropper (react-easy-crop): accent ring, dimmed outside. */
+.cd-avatar-crop-area {
+  border: 2px solid var(--cd-accent) !important;
+  color: rgb(16 17 18 / 0.72) !important;
+}
+
 /* Dialog titles: shadcn's font-heading is the mono face; use the UI face. */
 html[data-surface='workspace'] :is([data-slot='dialog-title'], [data-slot='alert-dialog-title']) {
   font-family: var(--cd-font-ui);

@@ -22,6 +22,51 @@ export const dayEndTimeSchema = timeSchema.refine(
   { message: 'Day boundary must be between 00:00 and 08:00.' },
 );
 
+/* ============================================================================
+ * AVATARS (Cloudinary)
+ * ========================================================================== */
+
+/**
+ * Cloudinary folder for user-uploaded avatars. Each user's images live in
+ * `${AVATAR_FOLDER}/<user id>/`.
+ *
+ * MUST match `profiles_avatar_public_id_shape` in database-schema.txt
+ * (migration 003), which rejects any public_id outside the row's own folder.
+ */
+export const AVATAR_FOLDER = 'profiles';
+
+export const AVATAR_PUBLIC_ID_MAX_LENGTH = 255;
+
+const AVATAR_PUBLIC_ID_PATTERN =
+  /^profiles\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9_-]+$/;
+
+/** Shape of an avatar public_id: `profiles/<uuid>/<name>`. */
+export const avatarPublicIdSchema = z
+  .string()
+  .max(AVATAR_PUBLIC_ID_MAX_LENGTH, 'Avatar id is too long.')
+  .regex(AVATAR_PUBLIC_ID_PATTERN, 'Avatar id is not in the avatars folder.');
+
+/** The Cloudinary folder a user's avatars are uploaded to. */
+export function avatarFolderFor(userId: string): string {
+  return `${AVATAR_FOLDER}/${userId}`;
+}
+
+/**
+ * True when `publicId` is a valid avatar id inside `userId`'s own folder.
+ * The shape check alone cannot know whose folder it is; use this wherever
+ * the user is known (e.g. before signing a URL or saving to the profile).
+ */
+export function isAvatarPublicIdOf(userId: string, publicId: string): boolean {
+  return (
+    avatarPublicIdSchema.safeParse(publicId).success &&
+    publicId.startsWith(`${avatarFolderFor(userId)}/`)
+  );
+}
+
+/* ============================================================================
+ * PROFILE UPDATE
+ * ========================================================================== */
+
 export const updateProfileSchema = z.object({
   displayName: z
     .string()
@@ -33,7 +78,49 @@ export const updateProfileSchema = z.object({
 
   avatarUrl: z.url('Avatar URL must be a valid URL.').nullable().optional(),
 
+  /**
+   * Set after a signed Cloudinary upload, or null to remove the uploaded
+   * avatar. Only the shape is checked here; the server must also check
+   * ownership with isAvatarPublicIdOf (the database enforces it too).
+   */
+  avatarPublicId: avatarPublicIdSchema.nullable().optional(),
+
   dayEndTime: dayEndTimeSchema.optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/* ============================================================================
+ * PROFILE ROUTES
+ * ========================================================================== */
+
+/**
+ * PATCH /profile: the fields a user edits directly. Avatars have their own
+ * routes (an avatar is only accepted after an upload the server signed), and
+ * email lives in Supabase Auth, so neither is accepted here.
+ */
+export const updateProfileDetailsSchema = z
+  .strictObject({
+    displayName: updateProfileSchema.shape.displayName,
+    dayEndTime: dayEndTimeSchema.optional(),
+  })
+  .refine(
+    (value) => value.displayName !== undefined || value.dayEndTime !== undefined,
+    { message: 'Provide displayName or dayEndTime.' },
+  );
+
+/** PUT /profile/avatar: adopt an uploaded image as the avatar. */
+export const setAvatarSchema = z.object({
+  publicId: avatarPublicIdSchema,
+});
+
+/** Sizes the server will sign avatar URLs for (square, px). */
+export const AVATAR_SIZES = [64, 128, 256, 512] as const;
+
+export const avatarSizeSchema = z.coerce
+  .number()
+  .pipe(z.literal(AVATAR_SIZES, { error: 'Size must be 64, 128, 256 or 512.' }));
+
+export type UpdateProfileDetailsInput = z.infer<typeof updateProfileDetailsSchema>;
+export type SetAvatarInput = z.infer<typeof setAvatarSchema>;
+export type AvatarSize = (typeof AVATAR_SIZES)[number];

@@ -19,6 +19,7 @@ import { LayoutDashboard, LogOut, NotebookText, Settings } from 'lucide-react';
 import { MdSpaceDashboard } from 'react-icons/md';
 
 import {
+  useOpenSettings,
   useSetSignOutModalOpen,
   useSetViewMode,
   useViewMode,
@@ -84,6 +85,7 @@ function CollapsedSidebar() {
   const viewMode = useViewMode();
   const setViewMode = useSetViewMode();
   const setSignOutModalOpen = useSetSignOutModalOpen();
+  const openSettings = useOpenSettings();
 
   return (
     <>
@@ -120,6 +122,10 @@ function CollapsedSidebar() {
         {/* Bottom area */}
         <div className="mt-auto flex flex-col items-center gap-1">
           <SyncStatus compact />
+
+          <RailButton label="Settings" onClick={() => openSettings()}>
+            <Settings className="size-[18px]" />
+          </RailButton>
 
           <RailButton label="Sign out" onClick={() => setSignOutModalOpen(true)}>
             <LogOut className="size-[18px]" />
@@ -180,6 +186,7 @@ function NavRow({
 function ExpandedSidebar() {
   const viewMode = useViewMode();
   const setViewMode = useSetViewMode();
+  const openSettings = useOpenSettings();
 
   return (
     <>
@@ -217,8 +224,7 @@ function ExpandedSidebar() {
           <NavRow
             label="Settings"
             icon={<Settings className="size-4" />}
-            disabled
-            badge="Soon"
+            onClick={() => openSettings()}
           />
         </nav>
 
