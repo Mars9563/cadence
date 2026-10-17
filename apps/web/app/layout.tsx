@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, JetBrains_Mono, Literata } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,17 @@ const literata = Literata({
   axes: ['opsz'],
   variable: '--font-literata',
 });
+
+/*
+ * viewport-fit=cover lets the app draw under the notch and the home
+ * indicator; components keep their content clear of them with the
+ * env(safe-area-inset-*) values.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   title: 'Cadence',

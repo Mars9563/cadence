@@ -2,6 +2,9 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@daypicker/react/style.css';
+/* Touch screens (no hover): controls that are hover-only on desktop show. */
+@custom-variant touch (@media (hover: none));
+
 /* The workspace surface is a dark surface: shadcn's dark: styles apply there. */
 @custom-variant dark (&:is(.dark *, [data-surface='workspace'] *));
 
@@ -142,6 +145,10 @@
 
   /* Layout */
   --cd-band-height: 40px; /* shared top band of rail, tree and tabs */
+  --cd-tabbar-height: 56px; /* phone bottom tab bar, without the safe area */
+
+  /* Height of the on-screen keyboard (phones), kept by useKeyboardInset. */
+  --keyboard-inset: 0px;
 
   /* Motion */
   --cd-duration-fast: 120ms;
@@ -219,6 +226,14 @@ html[data-surface='workspace'] [data-slot='tooltip-content'] > div[data-side] {
 .cd-avatar-crop-area {
   border: 2px solid var(--cd-accent) !important;
   color: rgb(16 17 18 / 0.72) !important;
+}
+
+/* Settings on phones is a full-screen sheet: keep its close button clear of
+   the notch. */
+@media (max-width: 767.98px) {
+  .cd-settings-sheet > [data-slot='dialog-close'] {
+    top: calc(env(safe-area-inset-top) + 0.625rem);
+  }
 }
 
 /* Dialog titles: shadcn's font-heading is the mono face; use the UI face. */

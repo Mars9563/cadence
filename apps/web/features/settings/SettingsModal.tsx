@@ -48,8 +48,10 @@ export function SettingsModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className={cn(
-          'grid h-[min(640px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[860px] gap-0 overflow-hidden p-0 sm:max-w-[860px]',
+          'cd-settings-sheet grid h-[min(640px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[860px] gap-0 overflow-hidden p-0 sm:max-w-[860px]',
           'grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[208px_minmax(0,1fr)] md:grid-rows-1',
+          // Phones: a full-screen sheet, clear of the notch and home bar.
+          'max-md:inset-0 max-md:h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)] max-md:ring-0',
         )}
       >
         <nav

@@ -7,10 +7,12 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import { useIsPhone } from '@/hooks/useIsPhone';
 import { useSurface } from '@/hooks/useSurface';
 import { useRestoreNoteTabs } from '@/store/selectors';
 
 import { Sidebar } from '../dashboard/Sidebar/Sidebar';
+import { MobileNotes } from '../mobile/MobileNotes';
 import { NotesWorkspace } from './Editor/NotesWorkspace';
 import { FileSystemPanel } from './FileSystem/FileSystemPanel';
 import { NoteTreeProvider } from './NoteTreeContext';
@@ -35,6 +37,8 @@ export function NotesLayout() {
 
   useSurface('workspace');
 
+  const isPhone = useIsPhone();
+
   /*
    * AppBootstrap only renders the app once the profile and the notes have
    * loaded, so both are available here. Restoring is a no-op after the
@@ -43,6 +47,16 @@ export function NotesLayout() {
   useEffect(() => {
     restoreNoteTabs();
   }, [restoreNoteTabs]);
+
+  // Phones: one note full-screen, the tree in a swipe-out drawer.
+  if (isPhone) {
+    return (
+      <NoteTreeProvider>
+        <Sidebar collapsed />
+        <MobileNotes />
+      </NoteTreeProvider>
+    );
+  }
 
   return (
     <NoteTreeProvider>

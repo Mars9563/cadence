@@ -32,6 +32,7 @@ import { createWritingPlugins } from '@/features/notes/Editor/writingPlugins';
 
 import { DailyNoteSaveIndicator } from './DailyNoteSaveIndicator';
 import { useDailyNoteAutosave } from '@/hooks/useDailyNoteAutosave';
+import { useWritingFocus } from '@/hooks/useWritingFocus';
 
 type DailyNoteEditorProps = {
   noteId: string;
@@ -120,6 +121,10 @@ const DailyNoteEditor = memo(
 
     const plugins = useMemo(() => createWritingPlugins(), []);
 
+    // Phones show the toolbar above the keyboard only while writing.
+    const paneRef = useRef<HTMLElement>(null);
+    const writing = useWritingFocus(paneRef);
+
     /*
      * If MDXEditor cannot read part of the document it renders what it can
      * and reports it here. Editing would then autosave the incomplete text
@@ -131,9 +136,11 @@ const DailyNoteEditor = memo(
 
     return (
       <section
+        ref={paneRef}
         className={cn(
           'daily-note-shell note-editor-pane',
           readOnly && 'is-read-only',
+          writing && 'is-writing',
         )}
       >
         {/* Same header row as a note: location, then save state + reading toggle. */}

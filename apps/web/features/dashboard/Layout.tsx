@@ -5,6 +5,7 @@ import { useSurface } from '@/hooks/useSurface';
 
 import { Dashboard } from './Dashboard';
 import { Sidebar } from './Sidebar/Sidebar';
+import { MobileTabBar } from '../mobile/MobileTabBar';
 import { TopBar } from './TopBar';
 import { DailyNote } from './DailyNote/dailyNote';
 
@@ -20,7 +21,7 @@ export function DashboardLayout() {
   useSurface('workspace');
 
   return (
-    <div className="bg-background text-foreground flex h-dvh min-h-0 overflow-hidden">
+    <div className="bg-background text-foreground flex h-dvh min-h-0 flex-col overflow-hidden md:flex-row">
       <Sidebar />
 
       <Tabs
@@ -28,17 +29,19 @@ export function DashboardLayout() {
         className="flex min-h-0 min-w-0 flex-1 flex-col gap-0"
       >
         {/* Shared top band: view tabs on the left, status on the right. */}
-        <header className="bg-sidebar flex h-(--cd-band-height) shrink-0 items-center justify-between gap-3 border-b border-border/70 px-2">
-          <TabsList className="h-7 gap-1 bg-transparent p-0">
-            <TabsTrigger value="dashboard" className={TAB_TRIGGER}>
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="daily-note" className={TAB_TRIGGER}>
-              Daily note
-            </TabsTrigger>
-          </TabsList>
+        <header className="bg-sidebar flex shrink-0 items-center justify-between gap-3 border-b border-border/70 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
+          <div className="flex h-(--cd-band-height) min-w-0 flex-1 items-center justify-between gap-3">
+            <TabsList className="h-7 gap-1 bg-transparent p-0">
+              <TabsTrigger value="dashboard" className={TAB_TRIGGER}>
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="daily-note" className={TAB_TRIGGER}>
+                Daily note
+              </TabsTrigger>
+            </TabsList>
 
-          <TopBar />
+            <TopBar />
+          </div>
         </header>
 
         <TabsContent value="dashboard" className="min-h-0 flex-1 overflow-hidden">
@@ -49,6 +52,8 @@ export function DashboardLayout() {
           <DailyNote />
         </TabsContent>
       </Tabs>
+
+      <MobileTabBar className="md:hidden" />
     </div>
   );
 }

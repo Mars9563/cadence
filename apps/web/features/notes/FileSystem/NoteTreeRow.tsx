@@ -146,7 +146,7 @@ function RowMenu({
         className={cn(
           'text-muted-foreground hover:bg-fill-selected hover:text-foreground data-popup-open:bg-fill-selected data-popup-open:text-foreground flex size-6 shrink-0 items-center justify-center rounded-sm transition-opacity',
           'focus-visible:ring-primary/60 outline-none focus-visible:ring-1',
-          'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
+          'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 touch:opacity-100',
         )}
       >
         <Ellipsis aria-hidden="true" className="size-4" />

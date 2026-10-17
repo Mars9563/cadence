@@ -1,10 +1,11 @@
 'use client';
 
-import { FilePlus } from 'lucide-react';
+import { FilePlus, PanelLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useActiveNoteId, useNoteTabs } from '@/store/selectors';
 
+import { useMobileNotes } from '../../mobile/MobileNotesContext';
 import { useNoteTree } from '../NoteTreeContext';
 import { NoteEditor } from './NoteEditor';
 import { NoteTabBar } from './NoteTabBar';
@@ -19,6 +20,9 @@ export function NotesWorkspace() {
   const tabs = useNoteTabs();
   const activeNoteId = useActiveNoteId();
 
+  // Phones show one note at a time; tabs stay remembered for desktop.
+  const isPhone = useMobileNotes() !== null;
+
   return (
     <section
       aria-label="Editor"
@@ -28,7 +32,7 @@ export function NotesWorkspace() {
         <EmptyWorkspace />
       ) : (
         <>
-          <NoteTabBar />
+          {isPhone ? null : <NoteTabBar />}
 
           <div className="relative min-h-0 flex-1">
             {tabs.map((tab) => (
@@ -55,6 +59,7 @@ export function NotesWorkspace() {
  */
 function EmptyWorkspace() {
   const { createNoteIn } = useNoteTree();
+  const mobile = useMobileNotes();
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
@@ -63,19 +68,35 @@ function EmptyWorkspace() {
           No note open
         </h2>
         <p className="text-muted-foreground text-(length:--cd-text-ui)">
-          Open a note from the sidebar, or start a new one.
+          {mobile
+            ? 'Open a note from your folders, or start a new one.'
+            : 'Open a note from the sidebar, or start a new one.'}
         </p>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-(length:--cd-text-ui)"
-        onClick={() => void createNoteIn(null)}
-      >
-        <FilePlus />
-        New note
-      </Button>
+      <div className="flex flex-wrap justify-center gap-2">
+        {mobile ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-(length:--cd-text-ui)"
+            onClick={mobile.openTree}
+          >
+            <PanelLeft />
+            Show folders
+          </Button>
+        ) : null}
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-(length:--cd-text-ui)"
+          onClick={() => void createNoteIn(null)}
+        >
+          <FilePlus />
+          New note
+        </Button>
+      </div>
     </div>
   );
 }

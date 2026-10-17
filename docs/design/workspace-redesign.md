@@ -133,3 +133,29 @@ All three columns share a 40px top band so their headers line up.
 - Daily Note shares `dailyNote.css`; workspace overrides are scoped to
   `.note-editor-pane` so the Daily Note is unchanged.
 - Narrow phones (<640px) are not a supported layout for this three-pane view yet.
+
+## Phones (below 768px)
+
+Tablets and up keep the desktop layout; below `md` (768px):
+
+- **Navigation:** the sidebar is hidden; a bottom tab bar (`features/mobile/MobileTabBar.tsx`)
+  has Dashboard, Notes and Settings (sign out is in Settings).
+- **Notes (Obsidian-style, `features/mobile/MobileNotes.tsx`):** one note full-screen,
+  no tab strip (tabs stay remembered for desktop). A mostly-horizontal right
+  swipe anywhere on the note, or the folders button at top-left, pulls the
+  tree in from the left and pushes the note aside; the drawer follows the
+  finger and settles open/closed on release (35% or a flick). Tapping the
+  visible strip of note, or opening a note, closes it. Swipes that start in
+  something scrolling sideways (code blocks) are left alone. The bottom tab
+  bar lives inside the drawer, so writing stays full-screen.
+- **Editor toolbar:** hidden while reading; while typing (text focused AND the
+  on-screen keyboard up) it is one sideways-scrolling row pinned above the
+  keyboard (`hooks/useWritingFocus.ts`, `hooks/useKeyboardInset.ts`). Toolbar
+  taps keep focus, so the keyboard stays up.
+- **Settings:** a full-screen sheet.
+- **Dashboard:** lists full width; clock and calendar below them.
+- **Touch screens** (`touch:` variant = `@media (hover: none)`): the tree's ⋯
+  menu and tab close buttons are always visible.
+- **Safe areas:** `viewport-fit=cover`; the top bands, bottom bar, drawer,
+  settings sheet, toasts and auth pages keep clear of the notch and the home
+  indicator with `env(safe-area-inset-*)`.

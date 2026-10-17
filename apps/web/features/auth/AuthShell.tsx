@@ -127,12 +127,12 @@ export function AuthShell({ headline, lede, children }: AuthShellProps) {
             mouseInteraction={false}
           />
           <div className="from-sidebar pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t to-transparent" />
-          <div className="absolute top-5 left-6">
+          <div className="absolute top-[calc(env(safe-area-inset-top)+1.25rem)] left-6">
             <Brand />
           </div>
         </div>
 
-        <div className="flex flex-1 justify-center px-6 pt-4 pb-10 sm:px-10 lg:items-center lg:py-10">
+        <div className="flex flex-1 justify-center px-6 pt-4 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-10 lg:items-center lg:py-10">
           <div className="w-full max-w-[22rem]">{children}</div>
         </div>
       </section>

@@ -30,6 +30,7 @@ import {
   useUpdateNote,
 } from '@/store/selectors';
 
+import { useMobileNotes } from '../../mobile/MobileNotesContext';
 import { useNoteTree } from '../NoteTreeContext';
 import { NoteTreeRow } from './NoteTreeRow';
 
@@ -70,6 +71,9 @@ export function FileSystemPanel() {
   const updateNote = useUpdateNote();
 
   const { treeRef, createNoteIn } = useNoteTree();
+
+  // Phones: the tree is a drawer that closes when a note opens.
+  const mobile = useMobileNotes();
 
   /*
    * react-arborist is virtualised, so it needs real pixel dimensions.
@@ -286,7 +290,10 @@ export function FileSystemPanel() {
             }
             onActivate={(node) => {
               // Always a new tab (or focus the tab it is already open in).
-              if (node.data.kind === 'note') openNoteTab(node.id);
+              if (node.data.kind === 'note') {
+                openNoteTab(node.id);
+                mobile?.closeTree();
+              }
             }}
             aria-label="Notes and folders"
           >

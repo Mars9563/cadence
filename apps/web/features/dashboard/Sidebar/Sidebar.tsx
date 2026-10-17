@@ -89,7 +89,7 @@ function CollapsedSidebar() {
 
   return (
     <>
-      <aside className="bg-sidebar flex w-13 shrink-0 flex-col items-center border-r border-border/70 pb-2">
+      <aside className="bg-sidebar hidden w-13 shrink-0 flex-col items-center border-r border-border/70 pb-2 md:flex">
         {/* Brand, in the shared top band. */}
         <div className="flex h-(--cd-band-height) shrink-0 items-center">
           <div
@@ -190,7 +190,7 @@ function ExpandedSidebar() {
 
   return (
     <>
-      <aside className="bg-sidebar flex w-56 shrink-0 flex-col border-r border-border/70">
+      <aside className="bg-sidebar hidden w-56 shrink-0 flex-col border-r border-border/70 md:flex">
         {/* Brand, in the shared top band. */}
         <div className="flex h-(--cd-band-height) shrink-0 items-center gap-2.5 px-3">
           <div

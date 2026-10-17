@@ -4,7 +4,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { MDXEditor } from '@mdxeditor/editor';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
 import { Orb } from '@yogesharc/thinking-orbs';
-import { BookOpen, PencilLine } from 'lucide-react';
+import { BookOpen, PanelLeft, PencilLine } from 'lucide-react';
 
 import '@mdxeditor/editor/style.css';
 // The Daily Note's writing-surface styles are reused as-is.
@@ -34,6 +34,8 @@ import {
   useToggleNoteTabReadOnly,
 } from '@/store/selectors';
 
+import { useWritingFocus } from '@/hooks/useWritingFocus';
+import { useMobileNotes } from '../../mobile/MobileNotesContext';
 import { NoteSaveIndicator } from './NoteSaveIndicator';
 import { NoteTitle } from './NoteTitle';
 import { createWritingPlugins } from './writingPlugins';
@@ -177,6 +179,9 @@ const NoteEditorBody = memo(
 
     const tabReadOnly = tab?.readOnly ?? false;
 
+    // Phones: a folders button opens the tree drawer.
+    const mobile = useMobileNotes();
+
     const editorRef = useRef<MDXEditorMethods>(null);
 
     const [initialContent] = useState(initialContentProp);
@@ -189,6 +194,10 @@ const NoteEditorBody = memo(
 
     const plugins = useMemo(() => createWritingPlugins(), []);
 
+    // Phones show the toolbar above the keyboard only while writing.
+    const paneRef = useRef<HTMLElement>(null);
+    const writing = useWritingFocus(paneRef);
+
     /*
      * If MDXEditor cannot read part of the document it renders what it can
      * and reports it here. Editing would then autosave the incomplete text
@@ -199,10 +208,31 @@ const NoteEditorBody = memo(
     const readOnly = tabReadOnly || unreadable;
 
     return (
-      <section className={cn('note-editor-pane', readOnly && 'is-read-only')}>
+      <section
+        ref={paneRef}
+        className={cn(
+          'note-editor-pane',
+          readOnly && 'is-read-only',
+          writing && 'is-writing',
+        )}
+      >
         {/* Path on the left; save state + reading-mode toggle on the right. */}
         <header className="note-editor-header">
-          <NoteBreadcrumb noteId={noteId} />
+          <div className="flex min-w-0 items-center gap-1.5">
+            {mobile ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Show folders"
+                onClick={mobile.openTree}
+                className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground -ml-2 size-9 shrink-0 rounded-full"
+              >
+                <PanelLeft className="size-[18px]" />
+              </Button>
+            ) : null}
+
+            <NoteBreadcrumb noteId={noteId} />
+          </div>
 
           <div className="note-editor-actions">
           <NoteSaveIndicator status={autosave.status} error={autosave.error} />

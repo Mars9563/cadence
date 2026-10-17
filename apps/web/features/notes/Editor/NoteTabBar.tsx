@@ -100,7 +100,7 @@ function NoteTabButton({ tab }: { tab: NoteTab }) {
         className={cn(
           'text-muted-foreground hover:bg-fill-selected hover:text-foreground flex size-5 shrink-0 items-center justify-center rounded-sm outline-none',
           'focus-visible:ring-primary/60 focus-visible:ring-1 focus-visible:opacity-100',
-          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 touch:opacity-100',
         )}
       >
         <X aria-hidden="true" className="size-3.5" />

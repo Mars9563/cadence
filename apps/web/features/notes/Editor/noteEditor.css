@@ -505,6 +505,49 @@
    Narrow canvases
    -------------------------------------------------------------------------- */
 
+/* --------------------------------------------------------------------------
+   Phones: the toolbar is hidden while reading and appears as one row that
+   scrolls sideways, pinned just above the on-screen keyboard, while typing:
+   the text has focus (.is-writing, useWritingFocus) AND the keyboard is up
+   (html.keyboard-open and --keyboard-inset, useKeyboardInset). Focus alone
+   is not enough: the Daily Note focuses itself on open, and phones do not
+   raise the keyboard for that.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 767.98px) {
+  .note-editor-pane .daily-note-editor .mdxeditor-toolbar {
+    display: none;
+  }
+
+  html.keyboard-open .note-editor-pane.is-writing .daily-note-editor .mdxeditor-toolbar {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: var(--keyboard-inset, 0px);
+    left: 0;
+    z-index: 40;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0.375rem max(0.75rem, env(safe-area-inset-right))
+      0.375rem max(0.75rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+    background: var(--sidebar);
+    box-shadow: none;
+    animation: none;
+    scrollbar-width: none;
+  }
+
+  html.keyboard-open .note-editor-pane.is-writing .daily-note-editor .mdxeditor-toolbar > * {
+    flex-shrink: 0;
+  }
+
+  /* Room to scroll the last lines above the toolbar and keyboard. */
+  html.keyboard-open .note-editor-pane.is-writing .daily-note-editor .daily-note-content {
+    padding-bottom: calc(10rem + var(--keyboard-inset, 0px));
+  }
+}
+
 @media (max-width: 640px) {
   .note-editor-pane {
     --note-gutter: 1.25rem;
