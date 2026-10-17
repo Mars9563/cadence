@@ -17,10 +17,12 @@
   --daily-note-toolbar: var(--background);
 
   /*
-   * Side padding that centres a --cd-measure column. Percentages resolve
-   * against the canvas width wherever this is used (title, toolbar, body).
+   * Side padding of the writing area. The text uses the full width of the
+   * pane (it wraps at the pane's edge, not at a fixed column), with a
+   * margin that grows a little on wide panes. Percentages resolve against
+   * the canvas width wherever this is used (title, toolbar, body).
    */
-  --note-gutter: max(1.5rem, calc((100% - var(--cd-measure)) / 2));
+  --note-gutter: clamp(1.25rem, 4%, 3rem);
 
   display: flex;
   height: 100%;
@@ -85,6 +87,18 @@
   flex-shrink: 0;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Shown when the editor could not read part of the document. */
+.note-unreadable {
+  flex: 0 0 auto;
+  margin: 0 var(--note-gutter) 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--cd-radius-md);
+  background: color-mix(in srgb, var(--cd-warning) 12%, transparent);
+  color: var(--cd-warning);
+  font-size: var(--cd-text-ui);
+  line-height: 1.5;
 }
 
 /* --------------------------------------------------------------------------
@@ -349,9 +363,13 @@
   font-size: 0.82em;
 }
 
+/* Code wraps like prose, so nothing scrolls sideways. */
 .note-editor-pane .daily-note-editor .daily-note-content pre {
   margin: 1.4em 0;
   padding: 0.875rem 1rem;
+  overflow-x: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   border-radius: var(--cd-radius-lg);
   background: var(--sidebar);
@@ -372,6 +390,99 @@
 
 .note-editor-pane .daily-note-scroll [data-slot='scroll-area-thumb'] {
   background: var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Code blocks (MDXEditor's CodeMirror editor), themed for the workspace.
+   MDXEditor's own class names are hashed CSS modules, hence the substring
+   selectors; the extra .cm-editor level outranks CodeMirror's injected theme.
+   -------------------------------------------------------------------------- */
+
+.note-editor-pane [class*='_codeMirrorWrapper_'] {
+  margin: 1.4em 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--cd-radius-lg);
+  background: var(--sidebar);
+}
+
+/* Language picker and delete: a slim header row, not floating over code. */
+.note-editor-pane [class*='_codeMirrorToolbar_'] {
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  padding: 0.25rem 0.375rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: transparent;
+}
+
+.note-editor-pane [class*='_codeMirrorToolbar_'] button {
+  height: 26px;
+  border: 0;
+  border-radius: var(--cd-radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--cd-font-ui);
+  font-size: var(--cd-text-meta);
+}
+
+.note-editor-pane [class*='_codeMirrorToolbar_'] button:hover {
+  background: var(--fill-hover);
+  color: var(--foreground);
+}
+
+.note-editor-pane [class*='_codeMirrorToolbar_'] svg {
+  width: 16px;
+  height: 16px;
+}
+
+.note-editor-pane .cm-editor {
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.note-editor-pane .cm-editor.cm-focused {
+  outline: none;
+}
+
+.note-editor-pane .cm-editor .cm-scroller {
+  font-family: var(--cd-font-code);
+  line-height: 1.6;
+}
+
+/* Long lines wrap like the prose around them. */
+.note-editor-pane .cm-editor .cm-content {
+  padding: 0.75rem 0;
+  caret-color: var(--primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-editor-pane .cm-editor .cm-gutters {
+  border-right: 0;
+  background: transparent;
+  color: var(--faint-foreground);
+}
+
+.note-editor-pane .cm-editor .cm-activeLine {
+  background: var(--fill-hover);
+}
+
+.note-editor-pane .cm-editor .cm-activeLineGutter {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.note-editor-pane .cm-editor .cm-cursor {
+  border-left-color: var(--primary);
+}
+
+.note-editor-pane .cm-editor .cm-selectionBackground,
+.note-editor-pane .cm-editor.cm-focused .cm-selectionBackground {
+  background: var(--cd-accent-soft) !important;
 }
 
 /* --------------------------------------------------------------------------

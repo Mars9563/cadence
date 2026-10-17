@@ -87,8 +87,8 @@ palette. Because it sits on `<html>`, portalled menus, tooltips and dialogs foll
 | `--cd-fill-hover` / `-selected` | text-primary at 5% / 8% | row and control fills |
 
 - **Type:** Geist Sans for interface (13px rows, 12px meta, 14px controls);
-  Literata (variable, optical sizing) for the note title and body, 17px / 1.7 on a
-  680px measure; JetBrains Mono for code only.
+  Literata (variable, optical sizing) for the note title and body, 17px / 1.7,
+  using the pane's full width (wrapping at its edge); JetBrains Mono for code only.
 - **Spacing:** Tailwind's 4px scale; steps 1, 2, 3, 4, 6, 8 for chrome.
 - **Radius:** 4px (kbd/badges), 6px (rows, tabs, buttons), 8px (popovers, dialogs).
   No radius on panes.

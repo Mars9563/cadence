@@ -1,24 +1,7 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  MDXEditor,
-  headingsPlugin,
-  listsPlugin,
-  linkPlugin,
-  linkDialogPlugin,
-  quotePlugin,
-  thematicBreakPlugin,
-  codeBlockPlugin,
-  markdownShortcutPlugin,
-  toolbarPlugin,
-  UndoRedo,
-  BoldItalicUnderlineToggles,
-  CreateLink,
-  BlockTypeSelect,
-  ListsToggle,
-  Separator,
-} from '@mdxeditor/editor';
+import { MDXEditor } from '@mdxeditor/editor';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
 import { BookOpen, PencilLine } from 'lucide-react';
 
@@ -44,6 +27,8 @@ import {
   useDailyNotesStatus,
   useSetDailyNoteContent,
 } from '@/store/selectors';
+
+import { createWritingPlugins } from '@/features/notes/Editor/writingPlugins';
 
 import { DailyNoteSaveIndicator } from './DailyNoteSaveIndicator';
 import { useDailyNoteAutosave } from '@/hooks/useDailyNoteAutosave';
@@ -103,7 +88,7 @@ const DailyNoteEditor = memo(
     const [initialContent] = useState(initialContentProp);
 
     // Reading mode guards against accidental edits. Not persisted.
-    const [readOnly, setReadOnly] = useState(false);
+    const [readingMode, setReadOnly] = useState(false);
 
     const autosave = useDailyNoteAutosave({
       noteId,
@@ -133,34 +118,16 @@ const DailyNoteEditor = memo(
       return () => window.clearTimeout(timer);
     }, []);
 
-    const plugins = useMemo(
-      () => [
-        headingsPlugin(),
-        listsPlugin(),
-        linkPlugin(),
-        linkDialogPlugin(),
-        quotePlugin(),
-        thematicBreakPlugin(),
-        codeBlockPlugin(),
-        markdownShortcutPlugin(),
-        toolbarPlugin({
-          toolbarClassName: 'daily-note-toolbar',
-          toolbarContents: () => (
-            <>
-              <BlockTypeSelect />
-              <Separator />
-              <BoldItalicUnderlineToggles />
-              <Separator />
-              <ListsToggle />
-              <CreateLink />
-              <Separator />
-              <UndoRedo />
-            </>
-          ),
-        }),
-      ],
-      [],
-    );
+    const plugins = useMemo(() => createWritingPlugins(), []);
+
+    /*
+     * If MDXEditor cannot read part of the document it renders what it can
+     * and reports it here. Editing would then autosave the incomplete text
+     * over the full one, so the document is locked to reading instead.
+     */
+    const [unreadable, setUnreadable] = useState(false);
+
+    const readOnly = readingMode || unreadable;
 
     return (
       <section
@@ -189,6 +156,7 @@ const DailyNoteEditor = memo(
                     size="icon-sm"
                     className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground aria-pressed:bg-fill-selected aria-pressed:text-foreground size-7 rounded-md"
                     aria-pressed={readOnly}
+                    disabled={unreadable}
                     aria-label={
                       readOnly ? 'Switch to editing' : 'Switch to reading'
                     }
@@ -213,6 +181,13 @@ const DailyNoteEditor = memo(
          * itself grows to fill the viewport, so the whole canvas is the
          * document.
          */}
+        {unreadable ? (
+          <p role="alert" className="note-unreadable">
+            Part of this daily note couldn’t be displayed, so it is open for reading
+            only. The saved text is unchanged.
+          </p>
+        ) : null}
+
         <ScrollArea className="daily-note-scroll">
           <div className="note-title-block">
             <h1 className="note-inline-title">{formatNoteDate(noteDate)}</h1>
@@ -224,6 +199,10 @@ const DailyNoteEditor = memo(
             onChange={autosave.onChange}
             plugins={plugins}
             readOnly={readOnly}
+            onError={({ error }) => {
+              console.error('[DailyNote] markdown could not be fully read:', error);
+              setUnreadable(true);
+            }}
             className="daily-note-editor"
             contentEditableClassName="daily-note-content"
           />

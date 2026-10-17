@@ -142,7 +142,6 @@
 
   /* Layout */
   --cd-band-height: 40px; /* shared top band of rail, tree and tabs */
-  --cd-measure: 680px; /* note column width */
 
   /* Motion */
   --cd-duration-fast: 120ms;

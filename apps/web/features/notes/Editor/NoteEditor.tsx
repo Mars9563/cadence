@@ -1,24 +1,7 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  MDXEditor,
-  headingsPlugin,
-  listsPlugin,
-  linkPlugin,
-  linkDialogPlugin,
-  quotePlugin,
-  thematicBreakPlugin,
-  codeBlockPlugin,
-  markdownShortcutPlugin,
-  toolbarPlugin,
-  UndoRedo,
-  BoldItalicUnderlineToggles,
-  CreateLink,
-  BlockTypeSelect,
-  ListsToggle,
-  Separator,
-} from '@mdxeditor/editor';
+import { MDXEditor } from '@mdxeditor/editor';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
 import { Orb } from '@yogesharc/thinking-orbs';
 import { BookOpen, PencilLine } from 'lucide-react';
@@ -53,6 +36,7 @@ import {
 
 import { NoteSaveIndicator } from './NoteSaveIndicator';
 import { NoteTitle } from './NoteTitle';
+import { createWritingPlugins } from './writingPlugins';
 
 type LoadState =
   | { status: 'loading' }
@@ -191,7 +175,7 @@ const NoteEditorBody = memo(
     const tab = useNoteTab(noteId);
     const toggleReadOnly = useToggleNoteTabReadOnly();
 
-    const readOnly = tab?.readOnly ?? false;
+    const tabReadOnly = tab?.readOnly ?? false;
 
     const editorRef = useRef<MDXEditorMethods>(null);
 
@@ -203,34 +187,16 @@ const NoteEditorBody = memo(
       setStoreContent: setNoteContent,
     });
 
-    const plugins = useMemo(
-      () => [
-        headingsPlugin(),
-        listsPlugin(),
-        linkPlugin(),
-        linkDialogPlugin(),
-        quotePlugin(),
-        thematicBreakPlugin(),
-        codeBlockPlugin(),
-        markdownShortcutPlugin(),
-        toolbarPlugin({
-          toolbarClassName: 'daily-note-toolbar',
-          toolbarContents: () => (
-            <>
-              <BlockTypeSelect />
-              <Separator />
-              <BoldItalicUnderlineToggles />
-              <Separator />
-              <ListsToggle />
-              <CreateLink />
-              <Separator />
-              <UndoRedo />
-            </>
-          ),
-        }),
-      ],
-      [],
-    );
+    const plugins = useMemo(() => createWritingPlugins(), []);
+
+    /*
+     * If MDXEditor cannot read part of the document it renders what it can
+     * and reports it here. Editing would then autosave the incomplete text
+     * over the full one, so the document is locked to reading instead.
+     */
+    const [unreadable, setUnreadable] = useState(false);
+
+    const readOnly = tabReadOnly || unreadable;
 
     return (
       <section className={cn('note-editor-pane', readOnly && 'is-read-only')}>
@@ -249,6 +215,7 @@ const NoteEditorBody = memo(
                   size="icon-sm"
                   className="text-muted-foreground hover:bg-fill-hover dark:hover:bg-fill-hover hover:text-foreground aria-pressed:bg-fill-selected aria-pressed:text-foreground size-7 rounded-md"
                   aria-pressed={readOnly}
+                  disabled={unreadable}
                   aria-label={readOnly ? 'Switch to editing' : 'Switch to reading'}
                   onClick={() => toggleReadOnly(noteId)}
                 />
@@ -263,6 +230,13 @@ const NoteEditorBody = memo(
           </Tooltip>
           </div>
         </header>
+
+        {unreadable ? (
+          <p role="alert" className="note-unreadable">
+            Part of this note couldn’t be displayed, so it is open for reading
+            only. The saved text is unchanged.
+          </p>
+        ) : null}
 
         <ScrollArea className="daily-note-scroll">
           <div className="note-title-block">
@@ -284,6 +258,10 @@ const NoteEditorBody = memo(
             onChange={autosave.onChange}
             plugins={plugins}
             readOnly={readOnly}
+            onError={({ error }) => {
+              console.error('[NoteEditor] markdown could not be fully read:', error);
+              setUnreadable(true);
+            }}
             className="daily-note-editor note-editor"
             contentEditableClassName="daily-note-content"
           />
