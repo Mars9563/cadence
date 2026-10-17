@@ -1,4 +1,3 @@
-```gitignore
 # ============================================
 # Dependencies
 # ============================================
@@ -164,7 +163,3 @@ logs/
 # OS/editor backups
 *.orig
 *.rej
-```
-
-# personally added
-database-schema.txt

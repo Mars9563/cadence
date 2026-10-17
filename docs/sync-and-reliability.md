@@ -10,7 +10,7 @@ This document covers four things that shipped together:
 3. Offline use with durable local changes that sync when the connection is
    back (outbox + drafts, persisted per user).
 4. A pass over the frontend and backend for logic bugs, using the database
-   schema (`database-schema.txt`, migrations 001/002) as the source of truth.
+   schema (`supabase/schema.sql`, migrations 001/002) as the source of truth.
 
 No database migration is needed. Every rule the code relies on already exists
 in the schema; the server now checks some of them up front to return precise

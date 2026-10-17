@@ -5,7 +5,7 @@ import { timeSchema, timeToSeconds } from './common';
 /**
  * Allowed range for `profiles.day_end_time`: 00:00:00 through 08:00:00 inclusive.
  *
- * MUST match `profiles_day_end_time_range` in sql/001_cadence_fixes.sql.
+ * MUST match `profiles_day_end_time_range` in supabase/schema.sql (migration 001).
  * The boundary is the moment a Cadence day rolls over; a late-evening value
  * would label every day with the calendar date it starts on.
  */
@@ -30,7 +30,7 @@ export const dayEndTimeSchema = timeSchema.refine(
  * Cloudinary folder for user-uploaded avatars. Each user's images live in
  * `${AVATAR_FOLDER}/<user id>/`.
  *
- * MUST match `profiles_avatar_public_id_shape` in database-schema.txt
+ * MUST match `profiles_avatar_public_id_shape` in supabase/schema.sql
  * (migration 003), which rejects any public_id outside the row's own folder.
  */
 export const AVATAR_FOLDER = 'profiles';
