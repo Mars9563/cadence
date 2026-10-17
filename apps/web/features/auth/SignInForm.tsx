@@ -1,53 +1,56 @@
 'use client';
 
 import { useState } from 'react';
-
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-
-import { FaGithub, FaGoogle } from 'react-icons/fa';
-import { HiOutlineMail, HiOutlineLockClosed } from 'react-icons/hi';
-
-import { toast } from 'sonner';
+import { Lock, Mail } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
-import { Separator } from '@/components/ui/separator';
-
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+
+import {
+  AuthDivider,
+  AuthHeader,
+  AuthTextField,
+  FormAlert,
+  OAuthButtons,
+  type OAuthProvider,
+} from './AuthFormParts';
 
 const signInSchema = z.object({
-  email: z.email('Please enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
+  email: z.email('Enter a valid email address.'),
+  password: z.string().min(1, 'Enter your password.'),
 });
 
 type SignInInput = z.infer<typeof signInSchema>;
 
+/*
+ * Errors the OAuth callback route (app/auth/callback) sends back as
+ * ?error=..., which this page used to ignore.
+ */
+const CALLBACK_ERRORS: Record<string, string> = {
+  missing_code: 'That sign-in link is incomplete. Try signing in again.',
+  oauth_callback:
+    'Signing in with that provider didn’t finish. Try again, or use your email and password.',
+};
+
 export function SignInForm() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const callbackError = CALLBACK_ERRORS[searchParams.get('error') ?? ''];
 
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'github' | null>(
-    null,
-  );
+  const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
 
   const form = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+    defaultValues: { email: '', password: '' },
   });
 
   async function onSubmit(data: SignInInput) {
@@ -61,28 +64,19 @@ export function SignInForm() {
 
     if (error) {
       setAuthError(error.message);
-
-      toast.error('Sign in failed', {
-        description: error.message,
-      });
-
       setIsLoading(false);
       return;
     }
-
-    toast.success('Signed in successfully', {
-      description: 'Welcome back to Cadence.',
-    });
 
     router.push('/');
     router.refresh();
   }
 
-  async function signInWithOAuth(provider: 'google' | 'github') {
+  async function signInWithOAuth(provider: OAuthProvider) {
     setAuthError(null);
-    setOauthLoading(provider);
+    setOauthPending(provider);
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
@@ -91,137 +85,82 @@ export function SignInForm() {
 
     if (error) {
       setAuthError(error.message);
-
-      toast.error(`Unable to continue with ${provider}`, {
-        description: error.message,
-      });
-
-      setOauthLoading(null);
+      setOauthPending(null);
     }
   }
 
-  const isBusy = isLoading || oauthLoading !== null;
+  const isBusy = isLoading || oauthPending !== null;
+  const alert = authError ?? callbackError;
 
   return (
-    <form
-      id="sign-in-form"
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="w-full space-y-6"
-    >
-      <FieldGroup className="gap-5">
-        {/* Email */}
+    <>
+      <AuthHeader title="Sign in" subtitle="Welcome back. Your day is waiting." />
+
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid gap-5"
+      >
+        {alert ? <FormAlert>{alert}</FormAlert> : null}
+
         <Controller
           name="email"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-in-email">Email</FieldLabel>
-
-              <div className="relative">
-                <HiOutlineMail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-in-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-in-email"
+              label="Email"
+              icon={Mail}
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
 
-        {/* Password */}
         <Controller
           name="password"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-in-password">Password</FieldLabel>
-
-              <div className="relative">
-                <HiOutlineLockClosed className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-in-password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-in-password"
+              label="Password"
+              icon={Lock}
+              type="password"
+              revealable
+              autoComplete="current-password"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
-      </FieldGroup>
-
-      {/* Auth error */}
-      {authError && (
-        <p role="alert" className="text-destructive text-sm">
-          {authError}
-        </p>
-      )}
-
-      {/* Sign in */}
-      <Button type="submit" className="h-11 w-full" disabled={isBusy}>
-        {isLoading ? 'Signing in...' : 'Sign in'}
-      </Button>
-
-      {/* Divider */}
-      <div className="relative flex items-center">
-        <Separator />
-
-        <span className="bg-background text-muted-foreground absolute left-1/2 -translate-x-1/2 px-3 text-[10px] font-medium tracking-widest">
-          OR CONTINUE WITH
-        </span>
-      </div>
-
-      {/* OAuth */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11"
-          disabled={isBusy}
-          onClick={() => signInWithOAuth('google')}
-        >
-          <FaGoogle />
-          {oauthLoading === 'google' ? 'Connecting...' : 'Google'}
-        </Button>
 
         <Button
-          type="button"
-          variant="outline"
-          className="h-11"
+          type="submit"
+          className="mt-1 h-10 text-(length:--cd-text-control)"
           disabled={isBusy}
-          onClick={() => signInWithOAuth('github')}
         >
-          <FaGithub />
-          {oauthLoading === 'github' ? 'Connecting...' : 'GitHub'}
+          {isLoading ? 'Signing in…' : 'Sign in'}
         </Button>
-      </div>
 
-      {/* Signup */}
-      <p className="text-muted-foreground text-center text-sm">
-        Don't have an account?{' '}
+        <AuthDivider />
+
+        <OAuthButtons busy={isBusy} pending={oauthPending} onSelect={signInWithOAuth} />
+      </form>
+
+      <p className="text-muted-foreground mt-8 text-(length:--cd-text-ui)">
+        New to Cadence?{' '}
         <Link
           href="/auth/sign-up"
-          className="text-foreground font-medium underline underline-offset-4"
+          className="text-foreground decoration-primary/60 hover:decoration-primary font-medium underline underline-offset-4"
         >
-          Sign up
+          Create an account
         </Link>
       </p>
-    </form>
+    </>
   );
 }

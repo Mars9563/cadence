@@ -1,44 +1,34 @@
 'use client';
 
 import { useState } from 'react';
-
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-
-import { FaGithub, FaGoogle } from 'react-icons/fa';
-import {
-  HiOutlineMail,
-  HiOutlineLockClosed,
-  HiOutlineUser,
-} from 'react-icons/hi';
-
-import { toast } from 'sonner';
+import { Lock, Mail, MailCheck, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
-import { Separator } from '@/components/ui/separator';
-
 import { createClient } from '@/lib/supabase/client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import {
+  AuthDivider,
+  AuthHeader,
+  AuthTextField,
+  FormAlert,
+  OAuthButtons,
+  type OAuthProvider,
+} from './AuthFormParts';
 
 const signUpSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters.'),
-    email: z.email('Please enter a valid email address.'),
-    password: z.string().min(8, 'Password must be at least 8 characters.'),
-    confirmPassword: z.string().min(1, 'Please confirm your password.'),
+    name: z.string().trim().min(2, 'Enter at least 2 characters.'),
+    email: z.email('Enter a valid email address.'),
+    password: z.string().min(8, 'Use at least 8 characters.'),
+    confirmPassword: z.string().min(1, 'Enter your password again.'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match.',
+    message: 'The passwords don’t match.',
     path: ['confirmPassword'],
   });
 
@@ -50,18 +40,16 @@ export function SignUpForm() {
 
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'github' | null>(
+  const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
+
+  /** Set when Supabase needs the address confirmed before signing in. */
+  const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(
     null,
   );
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   });
 
   async function onSubmit(data: SignUpInput) {
@@ -72,48 +60,33 @@ export function SignUpForm() {
       email: data.email,
       password: data.password,
       options: {
-        data: {
-          full_name: data.name,
-        },
+        data: { full_name: data.name },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     });
 
     if (error) {
       setAuthError(error.message);
-
-      toast.error('Sign up failed', {
-        description: error.message,
-      });
-
       setIsLoading(false);
       return;
     }
 
-    // If email confirmation is enabled, Supabase returns
-    // a user but no active session.
+    // With email confirmation on, Supabase returns a user but no session.
     if (!signUpData.session) {
-      toast.success('Account created', {
-        description: 'Check your email to confirm your account.',
-      });
-
+      setConfirmationSentTo(data.email);
       setIsLoading(false);
       return;
     }
-
-    toast.success('Account created', {
-      description: 'Welcome to Cadence.',
-    });
 
     router.push('/');
     router.refresh();
   }
 
-  async function signUpWithOAuth(provider: 'google' | 'github') {
+  async function signUpWithOAuth(provider: OAuthProvider) {
     setAuthError(null);
-    setOauthLoading(provider);
+    setOauthPending(provider);
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
@@ -122,195 +95,154 @@ export function SignUpForm() {
 
     if (error) {
       setAuthError(error.message);
-
-      toast.error(`Unable to continue with ${provider}`, {
-        description: error.message,
-      });
-
-      setOauthLoading(null);
+      setOauthPending(null);
     }
   }
 
-  const isBusy = isLoading || oauthLoading !== null;
+  if (confirmationSentTo) {
+    return (
+      <div role="status" className="grid gap-6">
+        <div className="bg-surface-raised text-primary flex size-10 items-center justify-center rounded-md">
+          <MailCheck aria-hidden="true" className="size-5" />
+        </div>
+
+        <AuthHeader
+          title="Check your email"
+          subtitle={`We sent a confirmation link to ${confirmationSentTo}. Open it to finish creating your account.`}
+        />
+
+        <p className="text-muted-foreground -mt-4 text-(length:--cd-text-ui) leading-relaxed">
+          Nothing there? Check spam, or{' '}
+          <button
+            type="button"
+            onClick={() => setConfirmationSentTo(null)}
+            className="text-foreground decoration-primary/60 hover:decoration-primary font-medium underline underline-offset-4"
+          >
+            use a different address
+          </button>
+          .
+        </p>
+
+        <Link
+          href="/auth/sign-in"
+          className="text-foreground decoration-primary/60 hover:decoration-primary w-fit text-(length:--cd-text-ui) font-medium underline underline-offset-4"
+        >
+          Back to sign in
+        </Link>
+      </div>
+    );
+  }
+
+  const isBusy = isLoading || oauthPending !== null;
 
   return (
-    <form
-      id="sign-up-form"
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="w-full space-y-6"
-    >
-      <FieldGroup className="gap-5">
-        {/* Name */}
+    <>
+      <AuthHeader
+        title="Create your account"
+        subtitle="Habits, tasks and notes, kept in one rhythm."
+      />
+
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid gap-5"
+      >
+        {authError ? <FormAlert>{authError}</FormAlert> : null}
+
         <Controller
           name="name"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-up-name">Name</FieldLabel>
-
-              <div className="relative">
-                <HiOutlineUser className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-up-name"
-                  type="text"
-                  placeholder="Your name"
-                  autoComplete="name"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-up-name"
+              label="Name"
+              icon={User}
+              placeholder="Your name"
+              autoComplete="name"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
 
-        {/* Email */}
         <Controller
           name="email"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-up-email">Email</FieldLabel>
-
-              <div className="relative">
-                <HiOutlineMail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-up-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-up-email"
+              label="Email"
+              icon={Mail}
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
 
-        {/* Password */}
         <Controller
           name="password"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-up-password">Password</FieldLabel>
-
-              <div className="relative">
-                <HiOutlineLockClosed className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-up-password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-up-password"
+              label="Password"
+              icon={Lock}
+              type="password"
+              revealable
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
 
-        {/* Confirm password */}
         <Controller
           name="confirmPassword"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="sign-up-confirm-password">
-                Confirm password
-              </FieldLabel>
-
-              <div className="relative">
-                <HiOutlineLockClosed className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-
-                <Input
-                  {...field}
-                  id="sign-up-confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  aria-invalid={fieldState.invalid}
-                  disabled={isBusy}
-                  className="h-11 pl-9"
-                />
-              </div>
-
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
+            <AuthTextField
+              {...field}
+              id="sign-up-confirm-password"
+              label="Confirm password"
+              icon={Lock}
+              type="password"
+              revealable
+              autoComplete="new-password"
+              disabled={isBusy}
+              error={fieldState.error?.message}
+            />
           )}
         />
-      </FieldGroup>
-
-      {/* Auth error */}
-      {authError && (
-        <p role="alert" className="text-destructive text-sm">
-          {authError}
-        </p>
-      )}
-
-      {/* Sign up */}
-      <Button type="submit" className="h-11 w-full" disabled={isBusy}>
-        {isLoading ? 'Creating account...' : 'Create account'}
-      </Button>
-
-      {/* Divider */}
-      <div className="relative flex items-center">
-        <Separator />
-
-        <span className="bg-background text-muted-foreground absolute left-1/2 -translate-x-1/2 px-3 text-[10px] font-medium tracking-widest">
-          OR CONTINUE WITH
-        </span>
-      </div>
-
-      {/* OAuth */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11"
-          disabled={isBusy}
-          onClick={() => signUpWithOAuth('google')}
-        >
-          <FaGoogle />
-          {oauthLoading === 'google' ? 'Connecting...' : 'Google'}
-        </Button>
 
         <Button
-          type="button"
-          variant="outline"
-          className="h-11"
+          type="submit"
+          className="mt-1 h-10 text-(length:--cd-text-control)"
           disabled={isBusy}
-          onClick={() => signUpWithOAuth('github')}
         >
-          <FaGithub />
-          {oauthLoading === 'github' ? 'Connecting...' : 'GitHub'}
+          {isLoading ? 'Creating account…' : 'Create account'}
         </Button>
-      </div>
 
-      {/* Sign in */}
-      <p className="text-muted-foreground text-center text-sm">
+        <AuthDivider />
+
+        <OAuthButtons busy={isBusy} pending={oauthPending} onSelect={signUpWithOAuth} />
+      </form>
+
+      <p className="text-muted-foreground mt-8 text-(length:--cd-text-ui)">
         Already have an account?{' '}
         <Link
           href="/auth/sign-in"
-          className="text-foreground font-medium underline underline-offset-4"
+          className="text-foreground decoration-primary/60 hover:decoration-primary font-medium underline underline-offset-4"
         >
           Sign in
         </Link>
       </p>
-    </form>
+    </>
   );
 }

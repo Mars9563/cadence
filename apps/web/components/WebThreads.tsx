@@ -325,7 +325,8 @@ const WebThreads: React.FC<WebThreadsProps> = ({
     const io = new IntersectionObserver(
       ([entry]) => {
         isVisible = entry.isIntersecting;
-        isVisible ? tryStart() : tryStop();
+        if (isVisible) tryStart();
+        else tryStop();
       },
       { threshold: 0 }
     );
@@ -333,7 +334,8 @@ const WebThreads: React.FC<WebThreadsProps> = ({
 
     const onVisibility = () => {
       isPageVisible = !document.hidden;
-      isPageVisible ? tryStart() : tryStop();
+      if (isPageVisible) tryStart();
+      else tryStop();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -361,7 +363,7 @@ const WebThreads: React.FC<WebThreadsProps> = ({
     const ctx = ctxMap.get(container);
     if (!ctx) return;
     const { program } = ctx;
-    const u = program.uniforms as Record<string, { value: any }>;
+    const u = program.uniforms as Record<string, { value: unknown }>;
 
     u.uSpeed.value = speed;
     u.uThreadCount.value = Math.round(threadCount);
@@ -395,9 +397,10 @@ const WebThreads: React.FC<WebThreadsProps> = ({
     c3[1] = rgb3[1];
     c3[2] = rgb3[2];
     const bg = hexToRgb(backgroundColor);
-    u.uBackgroundColor.value[0] = bg[0];
-    u.uBackgroundColor.value[1] = bg[1];
-    u.uBackgroundColor.value[2] = bg[2];
+    const bgValue = u.uBackgroundColor.value as Float32Array;
+    bgValue[0] = bg[0];
+    bgValue[1] = bg[1];
+    bgValue[2] = bg[2];
     u.uLightMode.value = lightMode;
     u.uMouseStrength.value = mouseStrength;
     u.uEnableMouse.value = mouseInteraction ? 1.0 : 0.0;
