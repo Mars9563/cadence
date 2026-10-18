@@ -1,0 +1,38 @@
+
+http:
+  middlewares:
+    cadence-redirect-to-https:
+      redirectScheme:
+        scheme: https
+  routers:
+    cadence-web-http:
+      entryPoints: [http]
+      rule: Host(`cadence.mrsdev.in`)
+      middlewares: [cadence-redirect-to-https]
+      service: cadence-web
+    cadence-web-https:
+      entryPoints: [https]
+      rule: Host(`cadence.mrsdev.in`)
+      service: cadence-web
+      tls:
+        certResolver: letsencrypt
+    cadence-api-http:
+      entryPoints: [http]
+      rule: Host(`backend-cadence.mrsdev.in`)
+      middlewares: [cadence-redirect-to-https]
+      service: cadence-server
+    cadence-api-https:
+      entryPoints: [https]
+      rule: Host(`backend-cadence.mrsdev.in`)
+      service: cadence-server
+      tls:
+        certResolver: letsencrypt
+  services:
+    cadence-web:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:30082'
+    cadence-server:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:30083'
