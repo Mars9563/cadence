@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cadence-server
+  namespace: cadence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cadence-server
+  template:
+    metadata:
+      labels:
+        app: cadence-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 20
+      hostAliases:
+        - ip: '10.0.0.112'
+          hostnames: ['cadence-supabase.mrsdev.in']
+      containers:
+        - name: cadence-server
+          image: ghcr.io/mars9563/cadence-server:bootstrap
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: '4000'
+            - name: TRUST_PROXY
+              value: '1'
+            - name: CORS_ORIGIN
+              value: 'https://cadence.mrsdev.in'
+            - name: SUPABASE_URL
+              value: 'https://cadence-supabase.mrsdev.in'
+          envFrom:
+            - secretRef:
+                name: cadence-server-env
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            httpGet: { path: /health, port: 4000 }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /health, port: 4000 }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadence-server
+  namespace: cadence
+spec:
+  type: NodePort
+  selector:
+    app: cadence-server
+  ports:
+    - port: 4000
+      targetPort: 4000
+      nodePort: 30083

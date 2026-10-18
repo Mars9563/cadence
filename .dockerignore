@@ -1,0 +1,22 @@
+# Everything listed here is NOT sent to the Docker builder ("build context").
+# Smaller context = faster builds, and secrets never end up inside an image.
+
+# Installed/compiled stuff: the Dockerfile recreates these inside the image,
+# for the right CPU architecture. Copying your laptop's x86 node_modules in
+# would break native binaries on the arm64 server.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+
+# Secrets stay out of images. Real config is injected at runtime.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Not needed to build anything.
+.git
+docs
+k8s
+deploy
+.github

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cadence-web
+  namespace: cadence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cadence-web
+  template:
+    metadata:
+      labels:
+        app: cadence-web
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      hostAliases:
+        - ip: '10.0.0.112'
+          hostnames: ['cadence-supabase.mrsdev.in']
+      containers:
+        - name: cadence-web
+          image: ghcr.io/mars9563/cadence-web:bootstrap
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HOSTNAME
+              value: '0.0.0.0'
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            httpGet: { path: /auth/sign-in, port: 3000 }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: 3000 }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/apps/web/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: next-cache
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadence-web
+  namespace: cadence
+spec:
+  type: NodePort
+  selector:
+    app: cadence-web
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30082
