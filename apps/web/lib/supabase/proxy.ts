@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { authPathAllowedWhenSignedIn, WORKSPACE_PATH } from '@/lib/routes';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -42,8 +43,9 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith('/auth');
 
-  if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Signed-in users skip sign-in/sign-up, but may finish a password reset.
+  if (user && isAuthRoute && !authPathAllowedWhenSignedIn(pathname)) {
+    return NextResponse.redirect(new URL(WORKSPACE_PATH, request.url));
   }
 
   if (!user && !isAuthRoute) {

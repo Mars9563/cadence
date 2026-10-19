@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useUser } from '@/store/selectors';
 
 import { SectionHeader } from '../SettingsModal';
+import Link from 'next/link';
+
+import { buttonVariants } from '@/components/ui/button';
 
 const PROVIDER_LABELS: Record<string, string> = {
   email: 'Email and password',
@@ -70,7 +73,7 @@ export function AccountSection() {
     <div className="grid gap-6">
       <SectionHeader
         title="Account"
-        description="Your sign-in details. Changing your email or password isn’t available yet."
+        description="Your sign-in details. Changing your email isn’t available yet."
       />
 
       <dl className="divide-y divide-border/60 border-y border-border/60">
@@ -86,6 +89,15 @@ export function AccountSection() {
           </div>
         ))}
       </dl>
+
+      {providers?.includes('email') ? (
+        <Link
+          href="/auth/update-password"
+          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'justify-self-start' })}
+        >
+          Change password
+        </Link>
+      ) : null}
     </div>
   );
 }

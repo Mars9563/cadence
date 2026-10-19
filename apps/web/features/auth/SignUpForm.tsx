@@ -9,6 +9,7 @@ import * as z from 'zod';
 import { Lock, Mail, MailCheck, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { WORKSPACE_PATH } from '@/lib/routes';
 import { createClient } from '@/lib/supabase/client';
 
 import {
@@ -78,7 +79,7 @@ export function SignUpForm() {
       return;
     }
 
-    router.push('/');
+    router.push(WORKSPACE_PATH);
     router.refresh();
   }
 
