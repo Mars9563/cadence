@@ -30,7 +30,11 @@ run_sql() {
 
 run_sql < supabase/tests/stubs.sql
 run_sql < supabase/schema.sql
-if [ "${APPLY_TWICE:-0}" = 1 ]; then run_sql < supabase/schema.sql; fi
+# APPLY_TWICE=1: re-run the migration 004 section (what gets pasted into the
+# SQL editor) to prove it is idempotent.
+if [ "${APPLY_TWICE:-0}" = 1 ]; then
+  sed -n '/^-- CADENCE — MIGRATION 004/,$p' supabase/schema.sql | run_sql
+fi
 echo "schema loaded"
 
 failed=0
