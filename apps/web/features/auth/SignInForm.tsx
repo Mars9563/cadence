@@ -1,6 +1,5 @@
 'use client';
 
-import { WORKSPACE_PATH } from '@/lib/routes';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,6 +9,7 @@ import * as z from 'zod';
 import { Lock, Mail } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { WORKSPACE_PATH } from '@/lib/routes';
 import { createClient } from '@/lib/supabase/client';
 
 import {
@@ -36,6 +36,8 @@ const CALLBACK_ERRORS: Record<string, string> = {
   missing_code: 'That sign-in link is incomplete. Try signing in again.',
   oauth_callback:
     'Signing in with that provider didn’t finish. Try again, or use your email and password.',
+  link_invalid:
+    'That link has expired or was already used. Request a new one below.',
 };
 
 export function SignInForm() {
@@ -139,6 +141,13 @@ export function SignInForm() {
             />
           )}
         />
+
+        <Link
+          href="/auth/forgot-password"
+          className="text-muted-foreground hover:text-foreground -mt-2 justify-self-end text-(length:--cd-text-meta) underline-offset-4 hover:underline"
+        >
+          Forgot password?
+        </Link>
 
         <Button
           type="submit"
