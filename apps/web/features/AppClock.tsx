@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { useCadenceToday } from '@/hooks/useCadenceToday';
+import { daySettingsFor } from '@/lib/cadenceDate';
 import { getCadenceDayEnd } from '@/lib/cadenceDay';
 import {
   useEnsureTodayDailyNote,
@@ -20,6 +21,8 @@ import {
  *   clock card, so the Notes view never saw the date change.
  * - When the Cadence day rolls over, makes sure the new day's Daily Note
  *   exists (it used to be created only at page load).
+ * - Ticks once more exactly when a pending time zone / day end change takes
+ *   effect, so "today" switches on time.
  */
 export function AppClock() {
   const user = useUser();
@@ -30,7 +33,7 @@ export function AppClock() {
   const ensureTodayDailyNote = useEnsureTodayDailyNote();
 
   useEffect(() => {
-    if (!user?.dayEndTime) {
+    if (!user) {
       return;
     }
 
@@ -38,7 +41,7 @@ export function AppClock() {
       const now = new Date();
 
       setCurrentTime(now);
-      setCadenceDayEnd(getCadenceDayEnd(now, user.dayEndTime));
+      setCadenceDayEnd(getCadenceDayEnd(now, daySettingsFor(user, now)));
     };
 
     updateClock();
@@ -55,6 +58,16 @@ export function AppClock() {
       interval = setInterval(updateClock, 60_000);
     }, millisecondsUntilNextMinute);
 
+    // A scheduled change: tick right when it takes effect.
+    const untilPending = user.pendingEffectiveAt
+      ? Date.parse(user.pendingEffectiveAt) - Date.now()
+      : -1;
+
+    const pendingTimeout =
+      untilPending > 0
+        ? setTimeout(updateClock, Math.min(untilPending + 50, 2_147_000_000))
+        : undefined;
+
     const handleVisible = () => {
       if (document.visibilityState === 'visible') updateClock();
     };
@@ -63,10 +76,11 @@ export function AppClock() {
 
     return () => {
       clearTimeout(timeout);
+      if (pendingTimeout) clearTimeout(pendingTimeout);
       if (interval) clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisible);
     };
-  }, [user?.dayEndTime, setCurrentTime, setCadenceDayEnd]);
+  }, [user, setCurrentTime, setCadenceDayEnd]);
 
   // A new Cadence day: make sure its Daily Note exists.
   useEffect(() => {

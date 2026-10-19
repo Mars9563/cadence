@@ -7,7 +7,7 @@ import type {
 } from '@cadence/validation';
 
 import { getItems } from '@/api/getItems';
-import { getCadenceDate } from '@/lib/cadenceDate';
+import { daySettingsFor, getCadenceDate } from '@/lib/cadenceDate';
 import { toUserMessage } from '@/lib/errors';
 import type { NewSyncOp } from '@/lib/sync/types';
 import { newId } from '@/lib/uuid';
@@ -201,10 +201,8 @@ export const CreateItemSlice: StateCreator<
       if (!item) return;
 
       // The day the user is looking at; a late delivery is refused.
-      const expectedDate = getCadenceDate(
-        new Date(),
-        state.user?.dayEndTime ?? undefined,
-      );
+      const now = new Date();
+      const expectedDate = getCadenceDate(now, daySettingsFor(state.user, now));
 
       // Completion is one-way and idempotent: a second tick is a no-op.
       const alreadyDone =

@@ -1,4 +1,8 @@
-import { DEFAULT_DAY_END_TIME } from '@/lib/cadenceDate';
+import { useMemo } from 'react';
+
+import type { DaySettings } from '@cadence/types';
+
+import { daySettingsFor } from '@/lib/cadenceDate';
 import { useCadenceStore } from './store';
 
 // ui selectors ----
@@ -42,11 +46,16 @@ export const useSetIsAuthenticated = () =>
   useCadenceStore((s) => s.setIsAuthenticated);
 
 /**
- * The user's day boundary ('HH:MM:SS');
- * the default until the profile loads.
+ * The time zone and day end in effect now (a due pending change applies at
+ * once); the defaults until the profile loads. Stable while the two values
+ * stay the same.
  */
-export const useDayEndTime = () =>
-  useCadenceStore((s) => s.user?.dayEndTime ?? DEFAULT_DAY_END_TIME);
+export const useDaySettings = (): DaySettings => {
+  const timeZone = useCadenceStore((s) => daySettingsFor(s.user, s.currentDateTime).timeZone);
+  const dayEndTime = useCadenceStore((s) => daySettingsFor(s.user, s.currentDateTime).dayEndTime);
+
+  return useMemo(() => ({ timeZone, dayEndTime }), [timeZone, dayEndTime]);
+};
 
 // items selectors ----
 

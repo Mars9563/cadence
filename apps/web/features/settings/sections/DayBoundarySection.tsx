@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from 'react';
 
-import { updateProfile } from '@/api/profile';
+import { scheduleDaySettings } from '@/api/profile';
 import { Button } from '@/components/ui/button';
 import { useCadenceToday } from '@/hooks/useCadenceToday';
 import { toUserMessage } from '@/lib/errors';
 import { formatCadenceDate } from '@/lib/history';
-import { useIsSocketConnected, useSetUser, useUser } from '@/store/selectors';
+import { useDaySettings, useIsSocketConnected, useSetUser } from '@/store/selectors';
 
 import { OfflineNote, SectionHeader } from '../SettingsModal';
 
@@ -22,12 +22,12 @@ const OPTIONS = Array.from({ length: 17 }, (_, index) => {
 const toHhMm = (value: string) => value.slice(0, 5);
 
 export function DayBoundarySection() {
-  const user = useUser();
   const setUser = useSetUser();
   const isOnline = useIsSocketConnected();
   const today = useCadenceToday();
 
-  const current = toHhMm(user?.dayEndTime ?? '04:00:00');
+  const daySettings = useDaySettings();
+  const current = toHhMm(daySettings.dayEndTime);
   const [value, setValue] = useState(current);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +46,15 @@ export function DayBoundarySection() {
     setSaving(true);
 
     try {
-      setUser(await updateProfile({ dayEndTime: `${value}:00` }));
+      setUser(
+        await scheduleDaySettings({
+          timeZone: daySettings.timeZone,
+          dayEndTime: `${value}:00`,
+        }),
+      );
       setJustSaved(true);
     } catch (caught) {
-      // The server explains both refusals (out of range, would reopen
-      // yesterday) in plain words.
+      // The server explains a refusal (e.g. out of range) in plain words.
       setError(toUserMessage(caught, 'The day boundary couldn’t be changed. Try again.'));
     } finally {
       setSaving(false);

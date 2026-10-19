@@ -4,7 +4,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { getProfile } from '@/api/profile';
 import { ApiError, isRetryableError } from '@/lib/api/request';
-import { getCadenceDate } from '@/lib/cadenceDate';
+import { daySettingsFor, getCadenceDate } from '@/lib/cadenceDate';
 import { getCadenceDayEnd } from '@/lib/cadenceDay';
 import { toUserMessage } from '@/lib/errors';
 import { hardNavigate } from '@/lib/navigation';
@@ -92,7 +92,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
       store().setCurrentDateTime(now);
       store().setUser(profile);
-      store().setCadenceDayEnd(getCadenceDayEnd(now, profile.dayEndTime));
+      store().setCadenceDayEnd(getCadenceDayEnd(now, daySettingsFor(profile, now)));
 
       // 3. Data. Each fetch records its own error; none of them throws.
       setPhase({ kind: 'step', step: 'data' });
@@ -110,7 +110,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
       setPhase({ kind: 'step', step: 'sync' });
 
       store().loadSync(profile.id);
-      store().ensureTodayDailyNote(getCadenceDate(now, profile.dayEndTime));
+      store().ensureTodayDailyNote(getCadenceDate(now, daySettingsFor(profile, now)));
 
       setPhase({ kind: 'step', step: 'done' });
       store().setAppReady();

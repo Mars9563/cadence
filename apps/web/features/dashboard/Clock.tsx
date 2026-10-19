@@ -3,7 +3,7 @@
 import {
   useCadenceDayEnd,
   useCurrentDateTime,
-  useUser,
+  useDaySettings,
 } from '@/store/selectors';
 
 import { formatTime } from '@/lib/itemFormat';
@@ -21,7 +21,7 @@ function formatRemainingTime(milliseconds: number): string {
 export function Clock() {
   const currentTime = useCurrentDateTime();
   const cadenceDayEnd = useCadenceDayEnd();
-  const endTime = useUser()?.dayEndTime;
+  const endTime = useDaySettings().dayEndTime;
 
   const time = currentTime.toLocaleTimeString('en-IN', {
     hour: '2-digit',

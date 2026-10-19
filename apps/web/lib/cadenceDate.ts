@@ -124,6 +124,14 @@ export function getCadenceDayEndInstant(at: Date, settings: DaySettings): Date {
   return cadenceDayEnd(settings, getCadenceDate(at, settings));
 }
 
+/** Settings for a possibly-missing profile (defaults until it loads). */
+export function daySettingsFor(
+  profile: DaySettingsProfile | null | undefined,
+  at: Date,
+): DaySettings {
+  return profile ? effectiveDaySettings(profile, at) : DEFAULT_DAY_SETTINGS;
+}
+
 type DaySettingsProfile = Pick<
   Profile,
   'timeZone' | 'dayEndTime' | 'pendingTimeZone' | 'pendingDayEndTime' | 'pendingEffectiveAt'

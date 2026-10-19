@@ -23,7 +23,6 @@ import {
 } from '@/lib/history';
 
 import {
-  useDayEndTime,
   useHabitCompletions,
   useHabitItems,
   useNormalItems,
@@ -78,15 +77,13 @@ export function CadenceCalendar() {
   const habitItems = useHabitItems();
   const habitCompletions = useHabitCompletions();
 
-  const dayEndTime = useDayEndTime();
-
   const todayDate = cadenceDateToLocalDate(today);
 
   const selected = selectedDate
     ? cadenceDateToLocalDate(selectedDate)
     : undefined;
 
-  const maxNormalCompletions = getMaxNormalCompletions(normalItems, dayEndTime);
+  const maxNormalCompletions = getMaxNormalCompletions(normalItems);
 
   function HistoryDayButton(props: DayButtonProps) {
     const date = localDateToCadenceDate(props.day.date);
@@ -97,7 +94,6 @@ export function CadenceCalendar() {
       taskItems,
       habitItems,
       habitCompletions,
-      dayEndTime,
       maxNormalCompletions,
     );
 

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { getCadenceDate } from '@/lib/cadenceDate';
 import { toUserMessage } from '@/lib/errors';
 import { toFieldErrors, type FieldErrors } from '@/lib/formErrors';
-import { useAddHabitItem, useDayEndTime } from '@/store/selectors';
+import { useAddHabitItem, useDaySettings } from '@/store/selectors';
 import { FormField, fieldA11y } from './FormField';
 import { ItemDialog } from './ItemDialog';
 import { ItemFormFrame } from './ItemFormFrame';
@@ -36,9 +36,9 @@ export function AddHabitDialog({ open, onOpenChange }: DialogProps) {
 function AddHabitForm({ onDone }: { onDone: () => void }) {
   const uid = useId();
   const addHabitItem = useAddHabitItem();
-  const dayEndTime = useDayEndTime();
+  const daySettings = useDaySettings();
 
-  const [today] = useState(() => getCadenceDate(new Date(), dayEndTime));
+  const [today] = useState(() => getCadenceDate(new Date(), daySettings));
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -77,7 +77,7 @@ function AddHabitForm({ onDone }: { onDone: () => void }) {
     }
 
     // Mirrors the items RLS rule: an already-ended habit can't be created.
-    if (endDate && endDate < getCadenceDate(new Date(), dayEndTime)) {
+    if (endDate && endDate < getCadenceDate(new Date(), daySettings)) {
       nextErrors['recurrence.endDate'] = 'The end date can\u2019t be in the past.';
     }
 
