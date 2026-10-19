@@ -7,17 +7,12 @@ import { Button } from '@/components/ui/button';
 import { useCadenceToday } from '@/hooks/useCadenceToday';
 import { toUserMessage } from '@/lib/errors';
 import { formatCadenceDate } from '@/lib/history';
-import { useDaySettings, useIsSocketConnected, useSetUser } from '@/store/selectors';
+import { useDaySettings, useIsSocketConnected, useSetUser, useUser } from '@/store/selectors';
 
-import { OfflineNote, SectionHeader } from '../SettingsModal';
+import { DAY_END_OPTIONS } from '../../time-zone/daySettingsUi';
+import { OfflineNote } from '../SettingsModal';
 
-/** 00:00, 00:30, ... 08:00, the range the database allows (migration 001). */
-const OPTIONS = Array.from({ length: 17 }, (_, index) => {
-  const minutes = index * 30;
-  const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-  const mm = String(minutes % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
-});
+const OPTIONS = DAY_END_OPTIONS;
 
 const toHhMm = (value: string) => value.slice(0, 5);
 
@@ -26,8 +21,9 @@ export function DayBoundarySection() {
   const isOnline = useIsSocketConnected();
   const today = useCadenceToday();
 
+  const user = useUser();
   const daySettings = useDaySettings();
-  const current = toHhMm(daySettings.dayEndTime);
+  const current = toHhMm(user?.pendingDayEndTime ?? daySettings.dayEndTime);
   const [value, setValue] = useState(current);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +44,7 @@ export function DayBoundarySection() {
     try {
       setUser(
         await scheduleDaySettings({
-          timeZone: daySettings.timeZone,
+          timeZone: user?.pendingTimeZone ?? daySettings.timeZone,
           dayEndTime: `${value}:00`,
         }),
       );
@@ -63,11 +59,6 @@ export function DayBoundarySection() {
 
   return (
     <div className="grid gap-6">
-      <SectionHeader
-        title="Day boundary"
-        description="When your Cadence day ends. Habits, tasks and the daily note roll over to the next day at this time (India time)."
-      />
-
       <form
         className="grid gap-2"
         onSubmit={(event) => {
@@ -127,9 +118,8 @@ export function DayBoundarySection() {
           with 04:00, working at 02:00 still counts as the day before.
         </p>
         <p>
-          A change can’t move “today” back to yesterday. In the early hours,
-          moving the boundary later is refused until the next day starts, so
-          yesterday can’t be reopened.
+          A new time starts once your current day is over, so yesterday can’t
+          be reopened and today can’t be cut short.
         </p>
       </div>
     </div>

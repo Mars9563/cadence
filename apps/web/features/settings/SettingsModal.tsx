@@ -14,7 +14,7 @@ import {
 } from '@/store/selectors';
 
 import { AccountSection } from './sections/AccountSection';
-import { DayBoundarySection } from './sections/DayBoundarySection';
+import { TimeAndDaySection } from './sections/TimeAndDaySection';
 import { ProfileSection } from './sections/ProfileSection';
 import { SignOutSection } from './sections/SignOutSection';
 
@@ -25,7 +25,7 @@ const SECTIONS: {
   Panel: ComponentType;
 }[] = [
   { id: 'profile', label: 'Profile', icon: UserRound, Panel: ProfileSection },
-  { id: 'day', label: 'Day boundary', icon: Clock, Panel: DayBoundarySection },
+  { id: 'day', label: 'Time & day', icon: Clock, Panel: TimeAndDaySection },
   { id: 'account', label: 'Account', icon: ShieldCheck, Panel: AccountSection },
   { id: 'sign-out', label: 'Sign out', icon: LogOut, Panel: SignOutSection },
 ];
