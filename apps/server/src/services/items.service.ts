@@ -49,6 +49,7 @@ type DbItem = {
   recurrence_end_date: string | null;
 
   completed_at: string | null;
+  completed_on: string | null;
 
   created_at: string;
   updated_at: string;
@@ -67,6 +68,7 @@ const ITEM_SELECT = `
   recurrence_start_date,
   recurrence_end_date,
   completed_at,
+  completed_on,
   created_at,
   updated_at
 `;
@@ -93,6 +95,7 @@ function mapDbItemToFrontend(item: DbItem): NormalItem | TaskItem | HabitItem {
         recurrenceStartDate: null,
         recurrenceEndDate: null,
         completedAt: item.completed_at,
+        completedOn: item.completed_on,
       };
 
     case 'task':
@@ -106,6 +109,7 @@ function mapDbItemToFrontend(item: DbItem): NormalItem | TaskItem | HabitItem {
         recurrenceStartDate: null,
         recurrenceEndDate: null,
         completedAt: item.completed_at,
+        completedOn: null,
       };
 
     case 'habit':
@@ -119,6 +123,7 @@ function mapDbItemToFrontend(item: DbItem): NormalItem | TaskItem | HabitItem {
         recurrenceStartDate: item.recurrence_start_date!,
         recurrenceEndDate: item.recurrence_end_date,
         completedAt: null,
+        completedOn: null,
       };
   }
 }

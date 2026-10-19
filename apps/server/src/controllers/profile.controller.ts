@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import type { Profile, ProfileView } from '@cadence/types';
 import {
   avatarSizeSchema,
+  daySettingsSchema,
+  onboardingSchema,
   setAvatarSchema,
   updateProfileDetailsSchema,
 } from '@cadence/validation';
@@ -14,8 +16,11 @@ import {
   signedAvatarUrl,
 } from '../services/avatar.service.js';
 import {
+  cancelPendingDaySettings,
   clearProfileAvatar,
+  completeOnboarding,
   getProfileByUserId,
+  scheduleDaySettings,
   setProfileAvatar,
   updateProfileDetails,
 } from '../services/profile.service.js';
@@ -32,10 +37,17 @@ const CLIENT_ERRORS: Record<string, { status: number; message: string }> = {
     status: 422,
     message: 'The day boundary must be between 00:00 and 08:00.',
   },
-  DAY_END_TIME_MOVES_DATE_BACK: {
+  INVALID_TIME_ZONE: {
+    status: 422,
+    message: "That time zone isn't recognised. Pick another from the list.",
+  },
+  ALREADY_ONBOARDED: {
     status: 409,
-    message:
-      'That boundary would move today back to yesterday. Choose a later time, or change it after the next day starts.',
+    message: 'Setup is already done. Change these in Settings.',
+  },
+  DISPLAY_NAME_INVALID: {
+    status: 422,
+    message: 'Display name must be 1 to 100 characters.',
   },
   AVATAR_NOT_OWNED: {
     status: 403,
@@ -153,7 +165,7 @@ export async function getProfile(req: Request, res: Response) {
   }
 }
 
-/** PATCH /profile  { displayName?, dayEndTime? } */
+/** PATCH /profile  { displayName } */
 export async function updateProfile(req: Request, res: Response) {
   const body = updateProfileDetailsSchema.safeParse(req.body);
 
@@ -168,6 +180,54 @@ export async function updateProfile(req: Request, res: Response) {
     return res.status(200).json({ success: true, data: toView(profile) });
   } catch (error) {
     return sendError(res, error, 'Failed to update profile.');
+  }
+}
+
+/** PUT /profile/day-settings  { timeZone, dayEndTime } -> schedules the change */
+export async function putDaySettings(req: Request, res: Response) {
+  const body = daySettingsSchema.safeParse(req.body);
+
+  if (!body.success) {
+    return sendValidationError(res, 'Invalid day settings.', body.error.flatten());
+  }
+
+  try {
+    const { token } = auth(req);
+    const profile = await scheduleDaySettings(token, body.data);
+
+    return res.status(200).json({ success: true, data: toView(profile) });
+  } catch (error) {
+    return sendError(res, error, 'Failed to save day settings.');
+  }
+}
+
+/** DELETE /profile/day-settings/pending */
+export async function deletePendingDaySettings(req: Request, res: Response) {
+  try {
+    const { token } = auth(req);
+    const profile = await cancelPendingDaySettings(token);
+
+    return res.status(200).json({ success: true, data: toView(profile) });
+  } catch (error) {
+    return sendError(res, error, 'Failed to cancel the change.');
+  }
+}
+
+/** POST /profile/onboarding  { timeZone, dayEndTime, displayName } */
+export async function postOnboarding(req: Request, res: Response) {
+  const body = onboardingSchema.safeParse(req.body);
+
+  if (!body.success) {
+    return sendValidationError(res, 'Invalid setup details.', body.error.flatten());
+  }
+
+  try {
+    const { token } = auth(req);
+    const profile = await completeOnboarding(token, body.data);
+
+    return res.status(200).json({ success: true, data: toView(profile) });
+  } catch (error) {
+    return sendError(res, error, 'Failed to finish setup.');
   }
 }
 

@@ -29,6 +29,12 @@ export type NormalItem = BaseItem & {
   recurrenceEndDate: null;
 
   completedAt: string | null;
+
+  /**
+   * Cadence date the item was completed on, frozen by the database at
+   * completion (a later time zone change can't move it).
+   */
+  completedOn: string | null;
 };
 
 export type TaskItem = BaseItem & {
@@ -47,6 +53,7 @@ export type TaskItem = BaseItem & {
   recurrenceEndDate: null;
 
   completedAt: string | null;
+  completedOn: null;
 };
 
 export type HabitItem = BaseItem & {
@@ -65,6 +72,7 @@ export type HabitItem = BaseItem & {
   recurrenceEndDate: string | null;
 
   completedAt: null;
+  completedOn: null;
 };
 
 export type Item = NormalItem | TaskItem | HabitItem;
