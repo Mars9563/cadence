@@ -163,3 +163,10 @@ logs/
 # OS/editor backups
 *.orig
 *.rej
+
+# ============================================
+# Private notes (roadmap, audits) - never committed
+# ============================================
+
+docs/private/
+docs/superpowers/
