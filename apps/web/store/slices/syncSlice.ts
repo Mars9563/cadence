@@ -42,6 +42,7 @@ import {
   type SyncOp,
 } from '@/lib/sync/types';
 import { daySettingsFor, getCadenceDate } from '@/lib/cadenceDate';
+import { needsOnboarding } from '@/lib/onboarding';
 import { newId } from '@/lib/uuid';
 
 import type { CadenceAppStore } from '../types';
@@ -1096,8 +1097,11 @@ export const CreateSyncSlice: StateCreator<
 
         // The day may have rolled over while we were offline.
         const now = new Date();
-        const today = getCadenceDate(now, daySettingsFor(get().user, now));
-        get().ensureTodayDailyNote(today);
+        const user = get().user;
+
+        if (!needsOnboarding(user)) {
+          get().ensureTodayDailyNote(getCadenceDate(now, daySettingsFor(user, now)));
+        }
       }
 
       // Anything queued while we were fetching stays visible.

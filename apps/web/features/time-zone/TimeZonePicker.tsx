@@ -36,7 +36,6 @@ export function TimeZonePicker({ id, value, onChange, disabled }: TimeZonePicker
       list.scrollTop = selected.offsetTop - list.clientHeight / 2 + selected.offsetHeight / 2;
     }
     // Only on first render; later picks happen where the user already is.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
