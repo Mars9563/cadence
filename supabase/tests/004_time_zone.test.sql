@@ -125,4 +125,138 @@ do $$ begin
   assert to_regprocedure('public.day_end_change_moves_date_back(time, time, timestamptz)') is null, 'guard fn dropped';
 end $$;
 
+-- ===========================================================================
+-- PART B: pending timing, RPCs, write lock-down
+-- ===========================================================================
+
+-- G. effective_at = max(end of D under old, end of D under new); the first
+--    date under the new settings is always after D.
+do $$
+declare
+  cases text[][] := array[
+    -- cur_zone, cur_end, new_zone, new_end, D, expected effective_at
+    array['Asia/Kolkata','04:00','America/New_York','04:00','2026-10-19','2026-10-20 08:00:00+00'],
+    array['America/New_York','04:00','Asia/Kolkata','04:00','2026-10-19','2026-10-20 08:00:00+00'],
+    array['Asia/Kolkata','04:00','Asia/Kolkata','08:00','2026-10-19','2026-10-20 02:30:00+00']
+  ];
+  c text[];
+  eff timestamptz;
+begin
+  foreach c slice 1 in array cases loop
+    eff := public.compute_pending_effective_at(c[1], c[2]::time, c[3], c[4]::time, c[5]::date);
+    assert eff = c[6]::timestamptz, format('effective_at %s -> %s: got %s', c[1], c[3], eff);
+    assert ((eff at time zone c[3]) - (c[4]::time - time '00:00'))::date > c[5]::date,
+           format('date did not advance for %s -> %s', c[1], c[3]);
+  end loop;
+
+  -- Extreme east (UTC-11 -> UTC+14): may skip a date, never repeats one.
+  eff := public.compute_pending_effective_at('Pacific/Pago_Pago','04:00','Pacific/Kiritimati','04:00','2026-10-19');
+  assert ((eff at time zone 'Pacific/Kiritimati') - interval '4 hours')::date > date '2026-10-19', 'extreme east';
+end $$;
+
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000c3', 'c@test.local'),
+  ('00000000-0000-0000-0000-0000000000d4', 'd@test.local');
+
+-- H. schedule / replace / clear / cancel, as the user
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000d4","role":"authenticated"}', true),
+       set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d4', true);
+set local role authenticated;
+
+do $$
+declare
+  u uuid := '00000000-0000-0000-0000-0000000000d4';
+  p public.profiles;
+begin
+  p := public.schedule_day_settings('America/New_York', '04:00');
+  assert p.time_zone = 'Asia/Kolkata', 'current zone unchanged until rollover';
+  assert p.pending_time_zone = 'America/New_York', 'pending zone';
+  assert p.pending_effective_at = public.compute_pending_effective_at(
+           'Asia/Kolkata', '04:00', 'America/New_York', '04:00', public.app_today(u)),
+         'pending effective_at';
+
+  p := public.schedule_day_settings('Europe/London', '05:00');
+  assert p.pending_time_zone = 'Europe/London' and p.pending_day_end_time = '05:00', 'replaced';
+
+  p := public.schedule_day_settings('Asia/Kolkata', '04:00');
+  assert p.pending_time_zone is null and p.pending_effective_at is null, 'same as current clears';
+
+  p := public.schedule_day_settings('Europe/London', '04:00');
+  p := public.cancel_pending_day_settings();
+  assert p.pending_time_zone is null, 'cancelled';
+
+  begin
+    perform public.schedule_day_settings('Mars/Olympus', '04:00');
+    raise exception 'fake zone accepted';
+  exception when check_violation then
+    assert sqlerrm = 'INVALID_TIME_ZONE', sqlerrm;
+  end;
+
+  begin
+    perform public.schedule_day_settings('Europe/London', '09:00');
+    raise exception 'out-of-range day end accepted';
+  exception when check_violation then
+    assert sqlerrm = 'DAY_END_TIME_OUT_OF_RANGE', sqlerrm;
+  end;
+end $$;
+
+-- I. direct writes are refused; name still works
+do $$
+declare col text;
+begin
+  foreach col in array array['time_zone','day_end_time','pending_effective_at','onboarded_at'] loop
+    begin
+      execute format('update public.profiles set %I = %I where id = auth.uid()', col, col);
+      raise exception 'direct write to % allowed', col;
+    exception when insufficient_privilege then
+      null;
+    end;
+  end loop;
+
+  update public.profiles set display_name = 'Dee' where id = auth.uid();
+  assert (select display_name from public.profiles where id = auth.uid()) = 'Dee', 'display_name writable';
+end $$;
+
+reset role;
+
+-- J. onboarding: immediate without data, scheduled with data, only once
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c3","role":"authenticated"}', true),
+       set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c3', true);
+set local role authenticated;
+
+do $$
+declare p public.profiles;
+begin
+  p := public.complete_onboarding('Europe/London', '05:00', '  Cee  ');
+  assert p.time_zone = 'Europe/London' and p.day_end_time = '05:00', 'applied immediately';
+  assert p.pending_time_zone is null, 'nothing pending';
+  assert p.display_name = 'Cee', 'name trimmed';
+  assert p.onboarded_at is not null, 'onboarded';
+
+  begin
+    perform public.complete_onboarding('Europe/London', '05:00', 'Cee');
+    raise exception 'second onboarding accepted';
+  exception when check_violation then
+    assert sqlerrm = 'ALREADY_ONBOARDED', sqlerrm;
+  end;
+end $$;
+
+reset role;
+
+-- user a1 has an item (section E), so onboarding schedules instead.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true),
+       set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+set local role authenticated;
+
+do $$
+declare p public.profiles;
+begin
+  p := public.complete_onboarding('America/New_York', '04:00', 'Ay');
+  assert p.time_zone = 'Asia/Kolkata', 'not applied immediately with data';
+  assert p.pending_time_zone = 'America/New_York', 'scheduled';
+  assert p.onboarded_at is not null, 'onboarded';
+end $$;
+
+reset role;
+
 rollback;

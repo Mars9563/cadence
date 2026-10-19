@@ -2428,3 +2428,245 @@ drop function if exists public.item_is_editable(uuid, text, date, date, timestam
 drop trigger if exists profiles_guard_day_end_time_trg on public.profiles;
 drop function if exists public.profiles_guard_day_end_time();
 drop function if exists public.day_end_change_moves_date_back(time, time, timestamptz);
+
+
+-- ============================================================================
+-- 004 B1. WHEN A PENDING CHANGE TAKES EFFECT
+-- ============================================================================
+--
+-- Pure, so it can be tested without faking now(). See the 004 header.
+-- ============================================================================
+
+create or replace function public.compute_pending_effective_at(
+  p_cur_zone    text,
+  p_cur_day_end time,
+  p_new_zone    text,
+  p_new_day_end time,
+  p_date        date
+)
+returns timestamptz
+language sql
+immutable
+set search_path = ''
+as $$
+  select greatest(
+    public.cadence_day_end(p_cur_zone, p_cur_day_end, p_date),
+    public.cadence_day_end(p_new_zone, p_new_day_end, p_date)
+  );
+$$;
+
+comment on function public.compute_pending_effective_at(text, time, text, time, date) is
+  'When a day-settings change requested on Cadence date p_date takes effect: after that day ends under both the old and the new settings.';
+
+
+-- Copy a due pending change into the main columns. Internal; the result of
+-- every rule is the same before and after (effective_day_settings already
+-- uses due pending values).
+create or replace function public.fold_due_day_settings(p_user_id uuid)
+returns void
+language sql
+set search_path = ''
+as $$
+  update public.profiles
+  set time_zone            = pending_time_zone,
+      day_end_time         = pending_day_end_time,
+      pending_time_zone    = null,
+      pending_day_end_time = null,
+      pending_effective_at = null
+  where id = p_user_id
+    and pending_effective_at <= now();
+$$;
+
+revoke execute on function public.fold_due_day_settings(uuid) from public, anon, authenticated;
+
+
+-- ============================================================================
+-- 004 B2. RPCs: THE ONLY WAY TO CHANGE ZONE, DAY END AND ONBOARDING
+-- ============================================================================
+--
+-- security definer, acting on auth.uid() only. Errors are raised with
+-- errcode check_violation and the code as the message, which the server maps:
+-- INVALID_TIME_ZONE, DAY_END_TIME_OUT_OF_RANGE, ALREADY_ONBOARDED,
+-- DISPLAY_NAME_INVALID.
+-- ============================================================================
+
+create or replace function public.schedule_day_settings(
+  p_time_zone    text,
+  p_day_end_time time
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  if not public.is_valid_time_zone(p_time_zone) then
+    raise exception 'INVALID_TIME_ZONE' using errcode = 'check_violation';
+  end if;
+
+  if p_day_end_time is null
+     or p_day_end_time < time '00:00:00'
+     or p_day_end_time > time '08:00:00' then
+    raise exception 'DAY_END_TIME_OUT_OF_RANGE' using errcode = 'check_violation';
+  end if;
+
+  perform public.fold_due_day_settings(v_user_id);
+
+  select * into v_profile from public.profiles where id = v_user_id;
+
+  if v_profile.time_zone = p_time_zone
+     and v_profile.day_end_time = p_day_end_time then
+    update public.profiles
+    set pending_time_zone = null,
+        pending_day_end_time = null,
+        pending_effective_at = null
+    where id = v_user_id
+    returning * into v_profile;
+  else
+    update public.profiles
+    set pending_time_zone    = p_time_zone,
+        pending_day_end_time = p_day_end_time,
+        pending_effective_at = public.compute_pending_effective_at(
+          v_profile.time_zone, v_profile.day_end_time,
+          p_time_zone, p_day_end_time,
+          public.app_today(v_user_id)
+        )
+    where id = v_user_id
+    returning * into v_profile;
+  end if;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.schedule_day_settings(text, time) is
+  'Schedule a time zone / day end change for the signed-in user; takes effect when the current day has ended under both settings.';
+
+
+create or replace function public.cancel_pending_day_settings()
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  perform public.fold_due_day_settings(v_user_id);
+
+  update public.profiles
+  set pending_time_zone = null,
+      pending_day_end_time = null,
+      pending_effective_at = null
+  where id = v_user_id
+  returning * into v_profile;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.cancel_pending_day_settings() is
+  'Cancel the signed-in users pending time zone / day end change (a change already in effect stays).';
+
+
+create or replace function public.complete_onboarding(
+  p_time_zone    text,
+  p_day_end_time time,
+  p_display_name text
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_name    text := btrim(coalesce(p_display_name, ''));
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  select * into v_profile from public.profiles where id = v_user_id;
+
+  if v_profile.onboarded_at is not null then
+    raise exception 'ALREADY_ONBOARDED' using errcode = 'check_violation';
+  end if;
+
+  if char_length(v_name) < 1 or char_length(v_name) > 100 then
+    raise exception 'DISPLAY_NAME_INVALID' using errcode = 'check_violation';
+  end if;
+
+  if not public.is_valid_time_zone(p_time_zone) then
+    raise exception 'INVALID_TIME_ZONE' using errcode = 'check_violation';
+  end if;
+
+  if p_day_end_time is null
+     or p_day_end_time < time '00:00:00'
+     or p_day_end_time > time '08:00:00' then
+    raise exception 'DAY_END_TIME_OUT_OF_RANGE' using errcode = 'check_violation';
+  end if;
+
+  update public.profiles
+  set display_name = v_name,
+      onboarded_at = now()
+  where id = v_user_id;
+
+  -- Nothing dated yet: apply at once. Otherwise wait for the day to end.
+  if not exists (select 1 from public.items where user_id = v_user_id)
+     and not exists (select 1 from public.habit_completions where user_id = v_user_id)
+     and not exists (select 1 from public.daily_notes where user_id = v_user_id) then
+    update public.profiles
+    set time_zone            = p_time_zone,
+        day_end_time         = p_day_end_time,
+        pending_time_zone    = null,
+        pending_day_end_time = null,
+        pending_effective_at = null
+    where id = v_user_id
+    returning * into v_profile;
+  else
+    v_profile := public.schedule_day_settings(p_time_zone, p_day_end_time);
+  end if;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.complete_onboarding(text, time, text) is
+  'First-time setup: name, time zone and day end. Applied immediately for users with no dated data, otherwise scheduled.';
+
+
+revoke execute on function public.schedule_day_settings(text, time) from public, anon;
+revoke execute on function public.cancel_pending_day_settings() from public, anon;
+revoke execute on function public.complete_onboarding(text, time, text) from public, anon;
+
+grant execute on function public.schedule_day_settings(text, time) to authenticated;
+grant execute on function public.cancel_pending_day_settings() to authenticated;
+grant execute on function public.complete_onboarding(text, time, text) to authenticated;
+
+
+-- ============================================================================
+-- 004 B3. PROFILE WRITE LOCK-DOWN
+-- ============================================================================
+--
+-- Until now a signed-in user could update ANY column of their own profile
+-- row straight through the REST API. Only the columns the app writes with the
+-- user's token stay writable; everything else changes through the RPCs.
+-- ============================================================================
+
+revoke update on public.profiles from anon, authenticated;
+
+grant update (display_name, avatar_public_id) on public.profiles to authenticated;
