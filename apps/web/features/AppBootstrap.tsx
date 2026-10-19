@@ -10,9 +10,10 @@ import { toUserMessage } from '@/lib/errors';
 import { hardNavigate } from '@/lib/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useCadenceStore } from '@/store/store';
-import { useAppReady, useDisconnectSocket } from '@/store/selectors';
+import { useAppReady, useDisconnectSocket, useUser } from '@/store/selectors';
 
 import { AppClock } from './AppClock';
+import { OnboardingScreen } from './onboarding/OnboardingScreen';
 import { LoadingScreen, type LoadPhase } from './LoadingScreen/loadingScreen';
 
 interface AppBootstrapProps {
@@ -43,6 +44,7 @@ const LOADER_EXIT_MS = 450;
  */
 export function AppBootstrap({ children }: AppBootstrapProps) {
   const appReady = useAppReady();
+  const needsOnboarding = useUser()?.onboardedAt === null;
   const disconnectSocket = useDisconnectSocket();
 
   const [phase, setPhase] = useState<LoadPhase>({ kind: 'step', step: 'session' });
@@ -167,10 +169,14 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
   return (
     <>
       {appReady ? (
-        <>
-          <AppClock />
-          {children}
-        </>
+        needsOnboarding ? (
+          <OnboardingScreen />
+        ) : (
+          <>
+            <AppClock />
+            {children}
+          </>
+        )
       ) : null}
 
       {loaderMounted ? (
