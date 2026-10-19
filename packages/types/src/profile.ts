@@ -32,8 +32,29 @@ export type Profile = {
    */
   dayEndTime: string;
 
+  /** IANA time zone that defines the user's "today" (e.g. 'Europe/London'). */
+  timeZone: string;
+
+  /**
+   * A scheduled change of time zone and/or day end. All three are set or all
+   * null. It takes effect at `pendingEffectiveAt` (computed by the database:
+   * once the current day has ended under both the old and the new settings).
+   */
+  pendingTimeZone: string | null;
+  pendingDayEndTime: string | null;
+  pendingEffectiveAt: string | null;
+
+  /** When first-time setup was completed; null shows the setup screen. */
+  onboardedAt: string | null;
+
   createdAt: string;
   updatedAt: string;
+};
+
+/** The two settings that decide a user's Cadence date. */
+export type DaySettings = {
+  timeZone: string;
+  dayEndTime: string;
 };
 
 /**

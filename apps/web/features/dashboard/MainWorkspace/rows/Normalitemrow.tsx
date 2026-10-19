@@ -2,7 +2,6 @@ import type { NormalItem } from '@cadence/types';
 
 import {
   useCompleteItem,
-  useDayEndTime,
   useIsItemCompletionPending,
 } from '@/store/selectors';
 
@@ -18,14 +17,13 @@ export function NormalItemRow({
 }) {
   const completeItem = useCompleteItem();
 
-  const dayEndTime = useDayEndTime();
 
   const isPending = useIsItemCompletionPending(item.id);
 
   const completed =
     historyDate === undefined
       ? item.completedAt !== null
-      : isNormalCompletedOnDate(item, historyDate, dayEndTime);
+      : isNormalCompletedOnDate(item, historyDate);
 
   function handleCheckedChange(checked: boolean) {
     if (!checked || historyDate !== undefined) {

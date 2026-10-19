@@ -1,5 +1,9 @@
 import type { Profile } from '@cadence/types';
-import type { UpdateProfileDetailsInput } from '@cadence/validation';
+import type {
+  DaySettingsInput,
+  OnboardingInput,
+  UpdateProfileDetailsInput,
+} from '@cadence/validation';
 
 import { createSupabaseClient } from '../supabase/supabase.js';
 
@@ -10,6 +14,11 @@ type DbProfile = {
   avatar_url: string | null;
   avatar_public_id?: string | null;
   day_end_time: string;
+  time_zone: string;
+  pending_time_zone: string | null;
+  pending_day_end_time: string | null;
+  pending_effective_at: string | null;
+  onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -21,6 +30,11 @@ const PROFILE_SELECT = `
   avatar_url,
   avatar_public_id,
   day_end_time,
+  time_zone,
+  pending_time_zone,
+  pending_day_end_time,
+  pending_effective_at,
+  onboarded_at,
   created_at,
   updated_at
 `;
@@ -36,16 +50,28 @@ function mapDbProfile(data: DbProfile): Profile {
     avatarUrl: data.avatar_url,
     avatarPublicId: data.avatar_public_id ?? null,
     dayEndTime: data.day_end_time,
+    timeZone: data.time_zone,
+    pendingTimeZone: data.pending_time_zone,
+    pendingDayEndTime: data.pending_day_end_time,
+    pendingEffectiveAt: data.pending_effective_at,
+    onboardedAt: data.onboarded_at,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
+/** Codes the day-settings RPCs raise as their message (migration 004). */
+const RPC_ERROR_CODES = [
+  'INVALID_TIME_ZONE',
+  'DAY_END_TIME_OUT_OF_RANGE',
+  'ALREADY_ONBOARDED',
+  'DISPLAY_NAME_INVALID',
+] as const;
+
 /**
  * Turn the database's own rules into specific codes:
- *   profiles_day_end_time_range       -> DAY_END_TIME_OUT_OF_RANGE (001)
- *   profiles_guard_day_end_time trg   -> DAY_END_TIME_MOVES_DATE_BACK (002)
  *   profiles_avatar_public_id_shape   -> AVATAR_NOT_OWNED (003)
+ *   RPC messages (004)                -> the code itself
  */
 function profileWriteError(error: { code?: string; message?: string }): Error {
   if (error.code === PG_CHECK_VIOLATION) {
@@ -55,13 +81,8 @@ function profileWriteError(error: { code?: string; message?: string }): Error {
       return new Error('AVATAR_NOT_OWNED');
     }
 
-    if (message.includes('moves the current Cadence date backwards')) {
-      return new Error('DAY_END_TIME_MOVES_DATE_BACK');
-    }
-
-    if (message.includes('profiles_day_end_time_range')) {
-      return new Error('DAY_END_TIME_OUT_OF_RANGE');
-    }
+    const code = RPC_ERROR_CODES.find((known) => message === known);
+    if (code) return new Error(code);
   }
 
   console.error('Failed to update profile:', error);
@@ -93,7 +114,7 @@ async function patchProfile(
   userId: string,
   accessToken: string,
   changes: Partial<
-    Pick<DbProfile, 'display_name' | 'day_end_time' | 'avatar_public_id'>
+    Pick<DbProfile, 'display_name' | 'avatar_public_id'>
   >,
 ): Promise<Profile> {
   const supabase = createSupabaseClient(accessToken);
@@ -113,13 +134,7 @@ async function patchProfile(
   return mapDbProfile(data as DbProfile);
 }
 
-/**
- * Display name and/or day boundary.
- *
- * The day boundary is guarded by the database: 00:00-08:00 only (001), and
- * never in a way that moves "today" to an earlier date (002), which would
- * reopen yesterday for completions.
- */
+/** Display name. Time zone and day end go through the day-settings RPCs. */
 export function updateProfileDetails(
   userId: string,
   accessToken: string,
@@ -127,7 +142,57 @@ export function updateProfileDetails(
 ): Promise<Profile> {
   return patchProfile(userId, accessToken, {
     ...(input.displayName !== undefined && { display_name: input.displayName }),
-    ...(input.dayEndTime !== undefined && { day_end_time: input.dayEndTime }),
+  });
+}
+
+/** Call a day-settings RPC; each returns the caller's updated profile row. */
+async function callProfileRpc(
+  accessToken: string,
+  fn: 'schedule_day_settings' | 'cancel_pending_day_settings' | 'complete_onboarding',
+  args: Record<string, string> = {},
+): Promise<Profile> {
+  const supabase = createSupabaseClient(accessToken);
+
+  const { data, error } = await supabase.rpc(fn, args).single();
+
+  if (error) throw profileWriteError(error);
+  if (!data) throw new Error('PROFILE_NOT_FOUND');
+
+  return mapDbProfile(data as DbProfile);
+}
+
+/**
+ * Schedule a time zone / day end change. The database decides when it takes
+ * effect (after the current day has ended under both settings), so it can
+ * never reopen a closed day.
+ */
+export function scheduleDaySettings(
+  accessToken: string,
+  input: DaySettingsInput,
+): Promise<Profile> {
+  return callProfileRpc(accessToken, 'schedule_day_settings', {
+    p_time_zone: input.timeZone,
+    p_day_end_time: input.dayEndTime,
+  });
+}
+
+/** Cancel a pending change (one already in effect stays). */
+export function cancelPendingDaySettings(accessToken: string): Promise<Profile> {
+  return callProfileRpc(accessToken, 'cancel_pending_day_settings');
+}
+
+/**
+ * First-time setup. Applied at once for users with nothing dated yet,
+ * otherwise scheduled like any other change.
+ */
+export function completeOnboarding(
+  accessToken: string,
+  input: OnboardingInput,
+): Promise<Profile> {
+  return callProfileRpc(accessToken, 'complete_onboarding', {
+    p_time_zone: input.timeZone,
+    p_day_end_time: input.dayEndTime,
+    p_display_name: input.displayName,
   });
 }
 

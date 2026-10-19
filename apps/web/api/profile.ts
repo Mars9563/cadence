@@ -5,7 +5,11 @@ import type {
   ProfileView,
   apiResponse,
 } from '@cadence/types';
-import type { UpdateProfileDetailsInput } from '@cadence/validation';
+import type {
+  DaySettingsInput,
+  OnboardingInput,
+  UpdateProfileDetailsInput,
+} from '@cadence/validation';
 
 import { ApiError, apiRequest } from '@/lib/api/request';
 
@@ -14,10 +18,34 @@ export function getProfile() {
   return apiRequest<ProfileView>('GET', '/profile');
 }
 
-/** Display name and/or day boundary. */
+/** Display name. */
 export async function updateProfile(input: UpdateProfileDetailsInput) {
   return (await apiRequest<apiResponse<ProfileView>>('PATCH', '/profile', input))
     .data!;
+}
+
+/**
+ * Schedule a time zone / day end change. The server answers with the
+ * profile, whose pending fields say when it takes effect.
+ */
+export async function scheduleDaySettings(input: DaySettingsInput) {
+  return (
+    await apiRequest<apiResponse<ProfileView>>('PUT', '/profile/day-settings', input)
+  ).data!;
+}
+
+/** Cancel the scheduled change. */
+export async function cancelPendingDaySettings() {
+  return (
+    await apiRequest<apiResponse<ProfileView>>('DELETE', '/profile/day-settings/pending')
+  ).data!;
+}
+
+/** First-time setup: name, time zone and day end. */
+export async function completeOnboarding(input: OnboardingInput) {
+  return (
+    await apiRequest<apiResponse<ProfileView>>('POST', '/profile/onboarding', input)
+  ).data!;
 }
 
 /** A signed upload the server built for a new avatar. */

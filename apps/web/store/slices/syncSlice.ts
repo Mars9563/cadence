@@ -41,7 +41,8 @@ import {
   type NewSyncOp,
   type SyncOp,
 } from '@/lib/sync/types';
-import { getCadenceDate } from '@/lib/cadenceDate';
+import { daySettingsFor, getCadenceDate } from '@/lib/cadenceDate';
+import { needsOnboarding } from '@/lib/onboarding';
 import { newId } from '@/lib/uuid';
 
 import type { CadenceAppStore } from '../types';
@@ -333,7 +334,13 @@ export const CreateSyncSlice: StateCreator<
             });
           }
         } else if (item.completedAt === null) {
-          state.upsertItem({ ...item, completedAt: now });
+          // Mirrors the database: a normal item's completion date is frozen
+          // as the Cadence day it was completed on.
+          state.upsertItem(
+            item.kind === 'normal'
+              ? { ...item, completedAt: now, completedOn: op.expectedDate }
+              : { ...item, completedAt: now },
+          );
         }
         break;
       }
@@ -619,7 +626,11 @@ export const CreateSyncSlice: StateCreator<
               completion.id.startsWith(LOCAL_COMPLETION_PREFIX),
           );
         } else if (item) {
-          state.upsertItem({ ...item, completedAt: null });
+          state.upsertItem(
+            item.kind === 'normal'
+              ? { ...item, completedAt: null, completedOn: null }
+              : { ...item, completedAt: null },
+          );
         }
 
         toast.error(completionFailureMessage(item?.title ?? 'This item', code));
@@ -1085,8 +1096,12 @@ export const CreateSyncSlice: StateCreator<
         set({ dailyNotesStatus: 'ready', dailyNotesError: null });
 
         // The day may have rolled over while we were offline.
-        const today = getCadenceDate(new Date(), get().user?.dayEndTime);
-        get().ensureTodayDailyNote(today);
+        const now = new Date();
+        const user = get().user;
+
+        if (!needsOnboarding(user)) {
+          get().ensureTodayDailyNote(getCadenceDate(now, daySettingsFor(user, now)));
+        }
       }
 
       // Anything queued while we were fetching stays visible.
@@ -1149,6 +1164,7 @@ function buildOptimisticItem(
         recurrenceStartDate: null,
         recurrenceEndDate: null,
         completedAt: null,
+        completedOn: null,
       };
 
     case 'task':
@@ -1162,6 +1178,7 @@ function buildOptimisticItem(
         recurrenceStartDate: null,
         recurrenceEndDate: null,
         completedAt: null,
+        completedOn: null,
       };
 
     case 'habit':
@@ -1175,6 +1192,7 @@ function buildOptimisticItem(
         recurrenceStartDate: op.input.recurrence.startDate,
         recurrenceEndDate: op.input.recurrence.endDate,
         completedAt: null,
+        completedOn: null,
       };
   }
 }

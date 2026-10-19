@@ -40,72 +40,6 @@ export function localDateToCadenceDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function previousCalendarDate(date: Date): Date {
-  const previous = new Date(date.getTime());
-
-  previous.setUTCDate(previous.getUTCDate() - 1);
-
-  return previous;
-}
-
-function parseTimeToSeconds(value: string): number {
-  const [hours = '0', minutes = '0', seconds = '0'] = value.split(':');
-
-  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
-}
-
-/**
- * Mirrors the database cadence_date_of() rule:
- *
- * 1. Convert the timestamp to Asia/Kolkata.
- * 2. Look at the local wall-clock time.
- * 3. If it is before the user's Cadence day boundary,
- *    the timestamp belongs to the previous Cadence date.
- */
-const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Asia/Kolkata',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-
-export function getCadenceDateFromTimestamp(
-  timestamp: string,
-  dayEndTime: string,
-): string {
-  const parts = IST_DATE_TIME_FORMATTER.formatToParts(new Date(timestamp));
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, Number(part.value)]),
-  ) as Record<string, number>;
-
-  const localDate = new Date(
-    Date.UTC(values.year, values.month - 1, values.day),
-  );
-
-  const localSeconds = values.hour * 3600 + values.minute * 60 + values.second;
-
-  if (localSeconds < parseTimeToSeconds(dayEndTime)) {
-    return localDateToUtcDateString(previousCalendarDate(localDate));
-  }
-
-  return localDateToUtcDateString(localDate);
-}
-
-function localDateToUtcDateString(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
 export function habitOccursOnDate(habit: HabitItem, date: string): boolean {
   if (date < habit.recurrenceStartDate) {
     return false;
@@ -137,15 +71,13 @@ export function isHabitCompletedOnDate(
   );
 }
 
-export function isNormalCompletedOnDate(
-  item: NormalItem,
-  date: string,
-  dayEndTime: string,
-): boolean {
-  return (
-    item.completedAt !== null &&
-    getCadenceDateFromTimestamp(item.completedAt, dayEndTime) === date
-  );
+/**
+ * A normal item counts on the Cadence date it was completed on, which the
+ * database freezes at completion (completedOn), so a later time zone change
+ * can't move it to another day.
+ */
+export function isNormalCompletedOnDate(item: NormalItem, date: string): boolean {
+  return item.completedAt !== null && item.completedOn === date;
 }
 
 export function getHistoryDayStats(
@@ -154,7 +86,6 @@ export function getHistoryDayStats(
   taskItems: TaskItem[],
   habitItems: HabitItem[],
   habitCompletions: HabitCompletion[],
-  dayEndTime: string,
   maxNormalCompletions: number,
 ): HistoryDayStats {
   const expectedHabits = habitItems.filter((habit) =>
@@ -174,7 +105,7 @@ export function getHistoryDayStats(
   ).length;
 
   const completedNormals = normalItems.filter((item) =>
-    isNormalCompletedOnDate(item, date, dayEndTime),
+    isNormalCompletedOnDate(item, date),
   ).length;
 
   return {
@@ -207,20 +138,15 @@ export function getHistoryDayStats(
   };
 }
 
-export function getMaxNormalCompletions(
-  normalItems: NormalItem[],
-  dayEndTime: string,
-): number {
+export function getMaxNormalCompletions(normalItems: NormalItem[]): number {
   const counts = new Map<string, number>();
 
   for (const item of normalItems) {
-    if (item.completedAt === null) {
+    if (item.completedAt === null || item.completedOn === null) {
       continue;
     }
 
-    const date = getCadenceDateFromTimestamp(item.completedAt, dayEndTime);
-
-    counts.set(date, (counts.get(date) ?? 0) + 1);
+    counts.set(item.completedOn, (counts.get(item.completedOn) ?? 0) + 1);
   }
 
   return Math.max(0, ...counts.values());

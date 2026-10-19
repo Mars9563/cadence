@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { getCadenceDate } from '@/lib/cadenceDate';
 import { toUserMessage } from '@/lib/errors';
 import { toFieldErrors, type FieldErrors } from '@/lib/formErrors';
-import { useAddTaskItem, useDayEndTime } from '@/store/selectors';
+import { useAddTaskItem, useDaySettings } from '@/store/selectors';
 import { FormField, fieldA11y } from './FormField';
 import { ItemDialog } from './ItemDialog';
 import { ItemFormFrame } from './ItemFormFrame';
@@ -34,10 +34,10 @@ export function AddTaskDialog({ open, onOpenChange }: DialogProps) {
 function AddTaskForm({ onDone }: { onDone: () => void }) {
   const uid = useId();
   const addTaskItem = useAddTaskItem();
-  const dayEndTime = useDayEndTime();
+  const daySettings = useDaySettings();
 
   // Form state is created when the dialog opens, so "today" is fresh.
-  const [today] = useState(() => getCadenceDate(new Date(), dayEndTime));
+  const [today] = useState(() => getCadenceDate(new Date(), daySettings));
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -62,7 +62,7 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
 
     if (!scheduledDate) {
       nextErrors.scheduledDate = 'Pick a date.';
-    } else if (scheduledDate < getCadenceDate(new Date(), dayEndTime)) {
+    } else if (scheduledDate < getCadenceDate(new Date(), daySettings)) {
       // Mirrors the items RLS rule: tasks cannot be created in the past.
       nextErrors.scheduledDate = 'A task can\u2019t be scheduled in the past.';
     }

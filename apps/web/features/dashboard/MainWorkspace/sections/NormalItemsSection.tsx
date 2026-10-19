@@ -7,7 +7,6 @@ import { useCadenceToday } from '@/hooks/useCadenceToday';
 import { formatCadenceDate, isNormalCompletedOnDate } from '@/lib/history';
 
 import {
-  useDayEndTime,
   useItemsReady,
   useNormalItems,
   useSelectedDate,
@@ -26,7 +25,6 @@ export function NormalItemsSection() {
 
   const selectedDate = useSelectedDate();
 
-  const dayEndTime = useDayEndTime();
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -43,7 +41,7 @@ export function NormalItemsSection() {
        * selected Cadence day.
        */
       return items.filter((item) =>
-        isNormalCompletedOnDate(item, historyDate, dayEndTime),
+        isNormalCompletedOnDate(item, historyDate),
       );
     }
 
@@ -56,9 +54,9 @@ export function NormalItemsSection() {
     return items.filter(
       (item) =>
         item.completedAt === null ||
-        isNormalCompletedOnDate(item, today, dayEndTime),
+        isNormalCompletedOnDate(item, today),
     );
-  }, [dayEndTime, historyDate, items, today]);
+  }, [historyDate, items, today]);
 
   return (
     <>

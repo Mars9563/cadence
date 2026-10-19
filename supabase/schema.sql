@@ -2073,3 +2073,600 @@ execute function public.set_updated_at();
 -- ============================================================================
 -- END OF MIGRATION 003
 -- ============================================================================
+
+
+-- ============================================================================
+-- CADENCE — MIGRATION 004: per-user time zone
+-- ============================================================================
+--
+-- Idempotent: safe to run more than once. Run after 003.
+--
+-- Every user gets their own IANA time zone (profiles.time_zone) instead of
+-- the hardcoded Asia/Kolkata, and "today" follows it, daylight saving
+-- included:
+--
+--   cadence_date = ((instant AT TIME ZONE zone) - day_end_time)::date
+--
+-- Changing the zone or the day end must never move "today" backwards, repeat
+-- a date, or reopen a closed day. So a change is stored as PENDING and takes
+-- effect once the current day D has ended under BOTH the old and the new
+-- settings:
+--
+--   effective_at = max(end of D under current settings,
+--                      end of D under new settings)
+--   end of D     = ((D + 1) + day_end_time) AT TIME ZONE zone
+--
+-- (Waiting for the old day alone is not enough: India -> New York at India's
+-- 04:00 would make it Monday again in New York.) A due pending change is used
+-- by every rule immediately; copying it into the main columns ("folding") is
+-- housekeeping done by the RPCs in part B.
+--
+-- items.completed_on freezes the Cadence date a normal item was completed on.
+-- Editability used to recompute it from completed_at with the CURRENT
+-- settings, so a zone change could relabel yesterday's completion as "today"
+-- and reopen it.
+--
+-- Part A: columns, zone-aware date functions, frozen completion date.
+-- Part B: write lock-down and the RPCs that change day settings.
+-- ============================================================================
+
+
+-- ============================================================================
+-- 004 A1. PROFILE COLUMNS
+-- ============================================================================
+
+alter table public.profiles
+  add column if not exists time_zone text not null default 'Asia/Kolkata',
+  add column if not exists pending_time_zone text,
+  add column if not exists pending_day_end_time time,
+  add column if not exists pending_effective_at timestamptz,
+  add column if not exists onboarded_at timestamptz;
+
+alter table public.profiles
+  drop constraint if exists profiles_pending_all_or_none;
+
+alter table public.profiles
+  add constraint profiles_pending_all_or_none
+  check (
+    (pending_time_zone is null
+     and pending_day_end_time is null
+     and pending_effective_at is null)
+    or
+    (pending_time_zone is not null
+     and pending_day_end_time is not null
+     and pending_effective_at is not null)
+  );
+
+alter table public.profiles
+  drop constraint if exists profiles_pending_day_end_time_range;
+
+alter table public.profiles
+  add constraint profiles_pending_day_end_time_range
+  check (
+    pending_day_end_time is null
+    or (pending_day_end_time >= time '00:00:00'
+        and pending_day_end_time <= time '08:00:00')
+  );
+
+
+-- ============================================================================
+-- 004 A2. TIME ZONE NAMES
+-- ============================================================================
+--
+-- Valid = a name Postgres knows (pg_timezone_names), excluding the duplicate
+-- posix/ and right/ trees. A CHECK constraint can't run a query, so a trigger
+-- enforces it.
+-- ============================================================================
+
+create or replace function public.is_valid_time_zone(p_name text)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(
+    p_name <> ''
+    and p_name not like 'posix/%'
+    and p_name not like 'right/%'
+    and exists (
+      select 1 from pg_catalog.pg_timezone_names t where t.name = p_name
+    ),
+    false
+  );
+$$;
+
+comment on function public.is_valid_time_zone(text) is
+  'True for IANA zone names Postgres knows (excluding posix/ and right/ duplicates).';
+
+
+create or replace function public.profiles_validate_time_zone()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if not public.is_valid_time_zone(new.time_zone) then
+    raise exception 'invalid time zone: %', new.time_zone
+      using errcode = 'check_violation';
+  end if;
+
+  if new.pending_time_zone is not null
+     and not public.is_valid_time_zone(new.pending_time_zone) then
+    raise exception 'invalid time zone: %', new.pending_time_zone
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_validate_time_zone_trg
+on public.profiles;
+
+create trigger profiles_validate_time_zone_trg
+before insert or update of time_zone, pending_time_zone
+on public.profiles
+for each row
+execute function public.profiles_validate_time_zone();
+
+
+-- ============================================================================
+-- 004 A3. ZONE-AWARE CADENCE DATES
+-- ============================================================================
+
+-- The user's settings in effect at p_at: the pending ones once they are due.
+create or replace function public.effective_day_settings(
+  p_user_id uuid,
+  p_at      timestamptz
+)
+returns table (time_zone text, day_end_time time)
+language sql
+stable
+set search_path = ''
+as $$
+  select
+    case when p.pending_effective_at <= p_at
+         then p.pending_time_zone else p.time_zone end,
+    case when p.pending_effective_at <= p_at
+         then p.pending_day_end_time else p.day_end_time end
+  from public.profiles p
+  where p.id = p_user_id;
+$$;
+
+comment on function public.effective_day_settings(uuid, timestamptz) is
+  'Time zone and day end in effect for the user at the given instant (a due pending change wins).';
+
+
+-- The instant the Cadence day p_date ends under (zone, day end).
+create or replace function public.cadence_day_end(
+  p_time_zone    text,
+  p_day_end_time time,
+  p_date         date
+)
+returns timestamptz
+language sql
+immutable
+set search_path = ''
+as $$
+  select ((p_date + 1) + p_day_end_time) at time zone p_time_zone;
+$$;
+
+comment on function public.cadence_day_end(text, time, date) is
+  'Instant the Cadence day p_date ends: the next calendar date at the day end time, in the zone.';
+
+
+-- Same signature as before; now zone-aware and pending-aware.
+create or replace function public.cadence_date_of(
+  p_user_id uuid,
+  p_at      timestamptz
+)
+returns date
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(
+    (
+      select ((p_at at time zone s.time_zone) - (s.day_end_time - time '00:00:00'))::date
+      from public.effective_day_settings(p_user_id, p_at) s
+    ),
+    ((p_at at time zone 'Asia/Kolkata') - interval '4 hours')::date
+  );
+$$;
+
+comment on function public.cadence_date_of(uuid, timestamptz) is
+  'Cadence calendar date containing the given instant, using the users time zone and day end in effect at that instant.';
+
+comment on function public.app_today(uuid) is
+  'Returns the users current Cadence calendar date (their time zone and day end, pending change applied once due).';
+
+
+-- ============================================================================
+-- 004 A4. FROZEN COMPLETION DATE FOR NORMAL ITEMS
+-- ============================================================================
+
+alter table public.items
+  add column if not exists completed_on date;
+
+-- Backfill once with the rule that applied so far (zone is still Asia/Kolkata
+-- for everyone here). The trigger below would block this update, and the
+-- updated_at trigger shouldn't bump rows that didn't really change.
+drop trigger if exists items_set_completed_on_trg on public.items;
+alter table public.items disable trigger items_set_updated_at;
+
+update public.items
+set completed_on = public.cadence_date_of(user_id, completed_at)
+where kind = 'normal'
+  and completed_at is not null
+  and completed_on is null;
+
+alter table public.items enable trigger items_set_updated_at;
+
+
+-- The database alone decides completed_on: set from app_today() when an item
+-- becomes completed, cleared when it is un-completed, otherwise kept. A value
+-- written by a client is always replaced.
+create or replace function public.items_set_completed_on()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.kind <> 'normal' or new.completed_at is null then
+    new.completed_on := null;
+  elsif tg_op = 'INSERT' or old.completed_at is null then
+    new.completed_on := public.app_today(new.user_id);
+  else
+    new.completed_on := old.completed_on;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger items_set_completed_on_trg
+before insert or update
+on public.items
+for each row
+execute function public.items_set_completed_on();
+
+
+-- Editability: normal items lock when their FROZEN completion day ends.
+create or replace function public.item_is_editable(
+  p_user_id             uuid,
+  p_kind                text,
+  p_scheduled_date      date,
+  p_recurrence_end_date date,
+  p_completed_at        timestamptz,
+  p_completed_on        date
+)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select case p_kind
+
+    when 'normal' then
+      p_completed_at is null
+      or p_completed_on >= public.app_today(p_user_id)
+
+    when 'task' then
+      p_scheduled_date >= public.app_today(p_user_id)
+
+    when 'habit' then
+      p_recurrence_end_date is null
+      or p_recurrence_end_date >= public.app_today(p_user_id)
+
+    else
+      false
+
+  end;
+$$;
+
+comment on function public.item_is_editable(uuid, text, date, date, timestamptz, date) is
+  'Cadence accountability rule for editing normal items, tasks and habits. Normal items lock when their frozen completion day (completed_on) ends.';
+
+
+drop policy if exists items_insert_own on public.items;
+
+create policy items_insert_own
+on public.items
+for insert
+to authenticated
+with check (
+  user_id = (select auth.uid())
+  and public.item_is_editable(
+    user_id, kind, scheduled_date, recurrence_end_date, completed_at, completed_on
+  )
+);
+
+drop policy if exists items_update_own on public.items;
+
+create policy items_update_own
+on public.items
+for update
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and public.item_is_editable(
+    user_id, kind, scheduled_date, recurrence_end_date, completed_at, completed_on
+  )
+)
+with check (
+  user_id = (select auth.uid())
+  and public.item_is_editable(
+    user_id, kind, scheduled_date, recurrence_end_date, completed_at, completed_on
+  )
+);
+
+drop policy if exists items_delete_own on public.items;
+
+create policy items_delete_own
+on public.items
+for delete
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and public.item_is_editable(
+    user_id, kind, scheduled_date, recurrence_end_date, completed_at, completed_on
+  )
+);
+
+-- The old five-argument version recomputed the date from completed_at.
+drop function if exists public.item_is_editable(uuid, text, date, date, timestamptz);
+
+
+-- ============================================================================
+-- 004 A5. REMOVE THE OLD DAY-BOUNDARY GUARD (002 A)
+-- ============================================================================
+--
+-- Pending changes (part B) make every change wait for the day to end, which
+-- closes the loophole fully; 002's comment said exactly this was needed.
+-- ============================================================================
+
+drop trigger if exists profiles_guard_day_end_time_trg on public.profiles;
+drop function if exists public.profiles_guard_day_end_time();
+drop function if exists public.day_end_change_moves_date_back(time, time, timestamptz);
+
+
+-- ============================================================================
+-- 004 B1. WHEN A PENDING CHANGE TAKES EFFECT
+-- ============================================================================
+--
+-- Pure, so it can be tested without faking now(). See the 004 header.
+-- ============================================================================
+
+create or replace function public.compute_pending_effective_at(
+  p_cur_zone    text,
+  p_cur_day_end time,
+  p_new_zone    text,
+  p_new_day_end time,
+  p_date        date
+)
+returns timestamptz
+language sql
+immutable
+set search_path = ''
+as $$
+  select greatest(
+    public.cadence_day_end(p_cur_zone, p_cur_day_end, p_date),
+    public.cadence_day_end(p_new_zone, p_new_day_end, p_date)
+  );
+$$;
+
+comment on function public.compute_pending_effective_at(text, time, text, time, date) is
+  'When a day-settings change requested on Cadence date p_date takes effect: after that day ends under both the old and the new settings.';
+
+
+-- Copy a due pending change into the main columns. Internal; the result of
+-- every rule is the same before and after (effective_day_settings already
+-- uses due pending values).
+create or replace function public.fold_due_day_settings(p_user_id uuid)
+returns void
+language sql
+set search_path = ''
+as $$
+  update public.profiles
+  set time_zone            = pending_time_zone,
+      day_end_time         = pending_day_end_time,
+      pending_time_zone    = null,
+      pending_day_end_time = null,
+      pending_effective_at = null
+  where id = p_user_id
+    and pending_effective_at <= now();
+$$;
+
+revoke execute on function public.fold_due_day_settings(uuid) from public, anon, authenticated;
+
+
+-- ============================================================================
+-- 004 B2. RPCs: THE ONLY WAY TO CHANGE ZONE, DAY END AND ONBOARDING
+-- ============================================================================
+--
+-- security definer, acting on auth.uid() only. Errors are raised with
+-- errcode check_violation and the code as the message, which the server maps:
+-- INVALID_TIME_ZONE, DAY_END_TIME_OUT_OF_RANGE, ALREADY_ONBOARDED,
+-- DISPLAY_NAME_INVALID.
+-- ============================================================================
+
+create or replace function public.schedule_day_settings(
+  p_time_zone    text,
+  p_day_end_time time
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  if not public.is_valid_time_zone(p_time_zone) then
+    raise exception 'INVALID_TIME_ZONE' using errcode = 'check_violation';
+  end if;
+
+  if p_day_end_time is null
+     or p_day_end_time < time '00:00:00'
+     or p_day_end_time > time '08:00:00' then
+    raise exception 'DAY_END_TIME_OUT_OF_RANGE' using errcode = 'check_violation';
+  end if;
+
+  perform public.fold_due_day_settings(v_user_id);
+
+  select * into v_profile from public.profiles where id = v_user_id;
+
+  if v_profile.time_zone = p_time_zone
+     and v_profile.day_end_time = p_day_end_time then
+    update public.profiles
+    set pending_time_zone = null,
+        pending_day_end_time = null,
+        pending_effective_at = null
+    where id = v_user_id
+    returning * into v_profile;
+  else
+    update public.profiles
+    set pending_time_zone    = p_time_zone,
+        pending_day_end_time = p_day_end_time,
+        pending_effective_at = public.compute_pending_effective_at(
+          v_profile.time_zone, v_profile.day_end_time,
+          p_time_zone, p_day_end_time,
+          public.app_today(v_user_id)
+        )
+    where id = v_user_id
+    returning * into v_profile;
+  end if;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.schedule_day_settings(text, time) is
+  'Schedule a time zone / day end change for the signed-in user; takes effect when the current day has ended under both settings.';
+
+
+create or replace function public.cancel_pending_day_settings()
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  perform public.fold_due_day_settings(v_user_id);
+
+  update public.profiles
+  set pending_time_zone = null,
+      pending_day_end_time = null,
+      pending_effective_at = null
+  where id = v_user_id
+  returning * into v_profile;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.cancel_pending_day_settings() is
+  'Cancel the signed-in users pending time zone / day end change (a change already in effect stays).';
+
+
+create or replace function public.complete_onboarding(
+  p_time_zone    text,
+  p_day_end_time time,
+  p_display_name text
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_name    text := btrim(coalesce(p_display_name, ''));
+  v_profile public.profiles;
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  select * into v_profile from public.profiles where id = v_user_id;
+
+  if v_profile.onboarded_at is not null then
+    raise exception 'ALREADY_ONBOARDED' using errcode = 'check_violation';
+  end if;
+
+  if char_length(v_name) < 1 or char_length(v_name) > 100 then
+    raise exception 'DISPLAY_NAME_INVALID' using errcode = 'check_violation';
+  end if;
+
+  if not public.is_valid_time_zone(p_time_zone) then
+    raise exception 'INVALID_TIME_ZONE' using errcode = 'check_violation';
+  end if;
+
+  if p_day_end_time is null
+     or p_day_end_time < time '00:00:00'
+     or p_day_end_time > time '08:00:00' then
+    raise exception 'DAY_END_TIME_OUT_OF_RANGE' using errcode = 'check_violation';
+  end if;
+
+  update public.profiles
+  set display_name = v_name,
+      onboarded_at = now()
+  where id = v_user_id;
+
+  -- Nothing dated yet: apply at once. Otherwise wait for the day to end.
+  if not exists (select 1 from public.items where user_id = v_user_id)
+     and not exists (select 1 from public.habit_completions where user_id = v_user_id)
+     and not exists (select 1 from public.daily_notes where user_id = v_user_id) then
+    update public.profiles
+    set time_zone            = p_time_zone,
+        day_end_time         = p_day_end_time,
+        pending_time_zone    = null,
+        pending_day_end_time = null,
+        pending_effective_at = null
+    where id = v_user_id
+    returning * into v_profile;
+  else
+    v_profile := public.schedule_day_settings(p_time_zone, p_day_end_time);
+  end if;
+
+  return v_profile;
+end;
+$$;
+
+comment on function public.complete_onboarding(text, time, text) is
+  'First-time setup: name, time zone and day end. Applied immediately for users with no dated data, otherwise scheduled.';
+
+
+revoke execute on function public.schedule_day_settings(text, time) from public, anon;
+revoke execute on function public.cancel_pending_day_settings() from public, anon;
+revoke execute on function public.complete_onboarding(text, time, text) from public, anon;
+
+grant execute on function public.schedule_day_settings(text, time) to authenticated;
+grant execute on function public.cancel_pending_day_settings() to authenticated;
+grant execute on function public.complete_onboarding(text, time, text) to authenticated;
+
+
+-- ============================================================================
+-- 004 B3. PROFILE WRITE LOCK-DOWN
+-- ============================================================================
+--
+-- Until now a signed-in user could update ANY column of their own profile
+-- row straight through the REST API. Only the columns the app writes with the
+-- user's token stay writable; everything else changes through the RPCs.
+-- ============================================================================
+
+revoke update on public.profiles from anon, authenticated;
+
+grant update (display_name, avatar_public_id) on public.profiles to authenticated;
