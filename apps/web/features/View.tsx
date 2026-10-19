@@ -4,6 +4,7 @@ import { useViewMode } from '@/store/selectors';
 import { DashboardLayout } from './dashboard/Layout';
 import { NotesLayout } from './notes/Layout';
 import { SettingsModal } from './settings/SettingsModal';
+import { TravelBanner } from './time-zone/TravelBanner';
 
 export function View() {
   const viewMode = useViewMode();
@@ -15,6 +16,7 @@ export function View() {
     <div className="bg-background">
       {viewMode == 'Dashboard' ? <DashboardLayout /> : <NotesLayout />}
       <SettingsModal />
+      <TravelBanner />
     </div>
   );
 }
