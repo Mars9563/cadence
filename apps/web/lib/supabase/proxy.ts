@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { WORKSPACE_PATH } from '@/lib/routes';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -43,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/auth');
 
   if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL(WORKSPACE_PATH, request.url));
   }
 
   if (!user && !isAuthRoute) {

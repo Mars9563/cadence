@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
+import { WORKSPACE_PATH } from '@/lib/routes';
 
 export async function GET(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
@@ -25,5 +26,5 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(new URL('/', appUrl));
+  return NextResponse.redirect(new URL(WORKSPACE_PATH, appUrl));
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { WORKSPACE_PATH } from '@/lib/routes';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -68,7 +69,7 @@ export function SignInForm() {
       return;
     }
 
-    router.push('/');
+    router.push(WORKSPACE_PATH);
     router.refresh();
   }
 
