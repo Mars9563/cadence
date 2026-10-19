@@ -7,6 +7,7 @@ import type { ProfileView } from '@cadence/types';
 import { completeOnboarding } from '@/api/profile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useSurface } from '@/hooks/useSurface';
 import { toUserMessage } from '@/lib/errors';
 import { useSetUser, useUser } from '@/store/selectors';
 
@@ -23,6 +24,9 @@ const LABEL = 'text-foreground text-(length:--cd-text-ui) font-medium';
  * the day ends and the display name.
  */
 export function OnboardingScreen() {
+  // The workspace's dark design tokens (the dashboard opts in the same way).
+  useSurface('workspace');
+
   const user = useUser();
   const setUser = useSetUser();
 

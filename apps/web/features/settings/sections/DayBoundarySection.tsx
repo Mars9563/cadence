@@ -87,7 +87,7 @@ export function DayBoundarySection() {
             {options.map((option) => (
               <option key={option} value={option}>
                 {option}
-                {option === current ? ' (current)' : ''}
+                {option === current ? ' (saved)' : ''}
               </option>
             ))}
           </select>

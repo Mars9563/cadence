@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -22,8 +22,22 @@ export function TimeZonePicker({ id, value, onChange, disabled }: TimeZonePicker
   const [query, setQuery] = useState('');
 
   const zones = useMemo(() => listTimeZones(), []);
-  const results = useMemo(() => searchTimeZones(zones, query).slice(0, 200), [zones, query]);
+  const results = useMemo(() => searchTimeZones(zones, query), [zones, query]);
   const current = zones.find((zone) => zone.id === value);
+
+  // Open with the chosen zone visible instead of the top of the list.
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const selected = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+
+    if (list && selected) {
+      list.scrollTop = selected.offsetTop - list.clientHeight / 2 + selected.offsetHeight / 2;
+    }
+    // Only on first render; later picks happen where the user already is.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="grid gap-2">
@@ -46,10 +60,11 @@ export function TimeZonePicker({ id, value, onChange, disabled }: TimeZonePicker
       />
 
       <div
+        ref={listRef}
         id={`${id}-list`}
         role="listbox"
         aria-label="Time zones"
-        className="border-border/70 max-h-56 overflow-y-auto rounded-md border"
+        className="border-border/70 relative max-h-56 overflow-y-auto rounded-md border"
       >
         {results.length === 0 ? (
           <p className="text-muted-foreground px-3 py-2 text-(length:--cd-text-meta)">

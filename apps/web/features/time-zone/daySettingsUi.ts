@@ -27,7 +27,7 @@ export function formatInstant(iso: string, timeZone: string): string {
 }
 
 /**
- * 'Switches to London (Europe) · day ends 04:00 — from Tue 20 Oct, 09:30',
+ * 'Switches to London (Europe) · day ends 04:00 — from Tue 20 Oct, 09:30 Tokyo time',
  * the time shown in the user's current zone; null when nothing is pending.
  */
 export function describePending(
@@ -40,5 +40,7 @@ export function describePending(
 
   if (!pendingTimeZone || !pendingDayEndTime || !pendingEffectiveAt) return null;
 
-  return `Switches to ${zoneLabel(pendingTimeZone)} · day ends ${pendingDayEndTime.slice(0, 5)} — from ${formatInstant(pendingEffectiveAt, profile.timeZone)}`;
+  const currentCity = (profile.timeZone.split('/').pop() ?? profile.timeZone).replaceAll('_', ' ');
+
+  return `Switches to ${zoneLabel(pendingTimeZone)} · day ends ${pendingDayEndTime.slice(0, 5)} — from ${formatInstant(pendingEffectiveAt, profile.timeZone)} ${currentCity} time`;
 }
