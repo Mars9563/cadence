@@ -46,6 +46,7 @@ export function SignInForm() {
   const searchParams = useSearchParams();
 
   const callbackError = CALLBACK_ERRORS[searchParams.get('error') ?? ''];
+  const accountDeleted = searchParams.get('deleted') === '1';
 
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -104,6 +105,12 @@ export function SignInForm() {
         onSubmit={form.handleSubmit(onSubmit)}
         className="grid gap-5"
       >
+        {accountDeleted && !alert ? (
+          <p role="status" className="bg-fill-hover rounded-md px-3 py-2.5 text-(length:--cd-text-ui)">
+            Your account and data were deleted.
+          </p>
+        ) : null}
+
         {alert ? <FormAlert>{alert}</FormAlert> : null}
 
         <Controller
