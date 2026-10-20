@@ -57,6 +57,16 @@ export const avatarUploadLimiter = rateLimit({
   message: TOO_MANY,
 });
 
+/** 5 data exports per hour per user: each one reads the whole account. */
+export const exportLimiter = rateLimit({
+  windowMs: 60 * WINDOW_MS,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: userOrIp,
+  message: TOO_MANY,
+});
+
 /** Signed-in user required, with the per-user and failed-auth limits. */
 export const requireUser: Array<
   (req: Request, res: Response, next: NextFunction) => unknown
