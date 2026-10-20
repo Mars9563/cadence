@@ -31,6 +31,8 @@ export async function exportAccount(req: Request, res: Response) {
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    // The web app is on another origin; let it read the file name.
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
     res.setHeader('Cache-Control', 'no-store');
 
     return res.status(200).send(Buffer.from(zip));
