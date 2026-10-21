@@ -31,7 +31,7 @@ export function authPathAllowedWhenSignedIn(pathname: string): boolean {
 }
 
 /** Pages anyone may read without signing in (exact paths only). */
-export const PUBLIC_PATHS = ['/privacy', '/terms'];
+export const PUBLIC_PATHS = ['/', '/privacy', '/terms'];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.includes(pathname);

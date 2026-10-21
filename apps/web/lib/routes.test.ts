@@ -33,7 +33,8 @@ describe('authPathAllowedWhenSignedIn', () => {
 });
 
 describe('isPublicPath', () => {
-  it('lets anyone read the legal pages', () => {
+  it('lets anyone read the home page and the legal pages', () => {
+    expect(isPublicPath('/')).toBe(true);
     expect(isPublicPath('/privacy')).toBe(true);
     expect(isPublicPath('/terms')).toBe(true);
   });
@@ -42,6 +43,6 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/workspace')).toBe(false);
     expect(isPublicPath('/privacy-settings')).toBe(false);
     expect(isPublicPath('/terms/../workspace')).toBe(false);
-    expect(isPublicPath('/')).toBe(false);
+    expect(isPublicPath('//')).toBe(false);
   });
 });
