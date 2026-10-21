@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore, type ReactNode } from 'react';
+import Link from 'next/link';
 import { MdSpaceDashboard } from 'react-icons/md';
 
 import WebThreads from '@/components/WebThreads';
@@ -133,7 +134,18 @@ export function AuthShell({ headline, lede, children }: AuthShellProps) {
         </div>
 
         <div className="flex flex-1 justify-center px-6 pt-4 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-10 lg:items-center lg:py-10">
-          <div className="w-full max-w-[22rem]">{children}</div>
+          <div className="w-full max-w-[22rem]">
+            {children}
+
+            <p className="text-faint-foreground mt-10 flex gap-4 text-(length:--cd-text-meta)">
+              <Link href="/privacy" className="hover:text-foreground">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-foreground">
+                Terms
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
     </main>

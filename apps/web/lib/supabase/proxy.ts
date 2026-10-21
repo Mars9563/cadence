@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { authPathAllowedWhenSignedIn, WORKSPACE_PATH } from '@/lib/routes';
+import { authPathAllowedWhenSignedIn, isPublicPath, WORKSPACE_PATH } from '@/lib/routes';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL(WORKSPACE_PATH, request.url));
   }
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isAuthRoute && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/sign-in';
 

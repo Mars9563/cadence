@@ -233,6 +233,19 @@ export function SignUpForm() {
         <AuthDivider />
 
         <OAuthButtons busy={isBusy} pending={oauthPending} onSelect={signUpWithOAuth} />
+
+        {/* Covers every way of signing up: email, Google and GitHub. */}
+        <p className="text-muted-foreground text-(length:--cd-text-meta) leading-relaxed">
+          By creating an account you agree to the{' '}
+          <Link href="/terms" className="text-foreground underline underline-offset-4">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="text-foreground underline underline-offset-4">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </form>
 
       <p className="text-muted-foreground mt-8 text-(length:--cd-text-ui)">

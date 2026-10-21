@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { authPathAllowedWhenSignedIn, safeRedirectPath, WORKSPACE_PATH } from './routes';
+import { authPathAllowedWhenSignedIn, isPublicPath, safeRedirectPath, WORKSPACE_PATH } from './routes';
 
 describe('safeRedirectPath', () => {
   it('keeps a path inside the app', () => {
@@ -29,5 +29,19 @@ describe('authPathAllowedWhenSignedIn', () => {
     expect(authPathAllowedWhenSignedIn('/auth/sign-in')).toBe(false);
     expect(authPathAllowedWhenSignedIn('/auth/sign-up')).toBe(false);
     expect(authPathAllowedWhenSignedIn('/auth/forgot-password')).toBe(false);
+  });
+});
+
+describe('isPublicPath', () => {
+  it('lets anyone read the legal pages', () => {
+    expect(isPublicPath('/privacy')).toBe(true);
+    expect(isPublicPath('/terms')).toBe(true);
+  });
+
+  it('keeps the app and lookalike paths private', () => {
+    expect(isPublicPath('/workspace')).toBe(false);
+    expect(isPublicPath('/privacy-settings')).toBe(false);
+    expect(isPublicPath('/terms/../workspace')).toBe(false);
+    expect(isPublicPath('/')).toBe(false);
   });
 });
