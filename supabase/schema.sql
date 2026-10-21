@@ -2711,3 +2711,28 @@ comment on function public.delete_my_account() is
 
 revoke execute on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
+
+
+-- ============================================================================
+-- CADENCE — MIGRATION 006: per-account theme
+-- ============================================================================
+--
+-- Idempotent: safe to run more than once. Run after 005.
+--
+-- The app's colour theme, saved with the account so it follows the user to
+-- every device. Keep the list in sync with THEME_IDS in apps/web/lib/theme.ts
+-- and themeSchema in @cadence/validation.
+-- ============================================================================
+
+alter table public.profiles
+  add column if not exists theme text not null default 'sage';
+
+alter table public.profiles
+  drop constraint if exists profiles_theme_known;
+
+alter table public.profiles
+  add constraint profiles_theme_known
+  check (theme in ('sage', 'red', 'blue', 'purple'));
+
+-- 004 locked profile updates down to listed columns; the theme joins them.
+grant update (theme) on public.profiles to authenticated;
