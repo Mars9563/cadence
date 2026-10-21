@@ -6,6 +6,8 @@ import { MdSpaceDashboard } from 'react-icons/md';
 
 import WebThreads from '@/components/WebThreads';
 import { useSurface } from '@/hooks/useSurface';
+import { THEMES } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type AuthShellProps = {
   /** Serif line over the threads (large screens). */
@@ -15,16 +17,6 @@ type AuthShellProps = {
   children: ReactNode;
 };
 
-/*
- * Thread palette: deep sage into the accent, with the primary text colour
- * where threads overlap. Kept in sync with the --cd-* tokens by hand because
- * the WebGL shader takes hex values, not CSS variables.
- */
-const THREADS = {
-  color1: '#6F8468',
-  color2: '#B8C5B0',
-  color3: '#D3DCCB',
-} as const;
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -52,6 +44,8 @@ function useReducedMotion() {
  */
 export function AuthShell({ headline, lede, children }: AuthShellProps) {
   useSurface('workspace');
+  // Threads follow the colour theme (WebGL needs hex values, not CSS variables).
+  const THREADS = THEMES[useTheme()].threads;
 
   const reducedMotion = useReducedMotion();
   const speed = reducedMotion ? 0 : 0.05;

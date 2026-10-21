@@ -8,15 +8,16 @@ import WebThreads from '@/components/WebThreads';
 import { buttonVariants } from '@/components/ui/button';
 import { useSurface } from '@/hooks/useSurface';
 import { WORKSPACE_PATH } from '@/lib/routes';
+import { THEMES } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
 import styles from './landing.module.css';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import { TodayPreview } from './TodayPreview';
 
 const GITHUB_URL = 'https://github.com/Mars9563/cadence';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/mradulrajsingh';
-
-const THREADS = { color1: '#6F8468', color2: '#B8C5B0', color3: '#D3DCCB' } as const;
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -108,6 +109,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
   const reducedMotion = useReducedMotion();
   const [pulse, firePulse] = usePulse(reducedMotion);
   const [share, setShare] = useState(0.3);
+  const threads = THEMES[useTheme()].threads;
 
   return (
     <div className="bg-background text-foreground min-h-dvh overflow-x-clip">
@@ -117,6 +119,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
           Cadence
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
+          <ThemeSwitcher className="mr-1 sm:mr-2" />
           {signedIn ? null : (
             <Link
               href="/auth/sign-in"
@@ -144,7 +147,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
           )}
         >
           <WebThreads
-            {...THREADS}
+            {...threads}
             speed={reducedMotion ? 0 : 0.35}
             threadCount={7}
             frequency={3.6}

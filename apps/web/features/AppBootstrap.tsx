@@ -9,6 +9,7 @@ import { getCadenceDayEnd } from '@/lib/cadenceDay';
 import { toUserMessage } from '@/lib/errors';
 import { hardNavigate } from '@/lib/navigation';
 import { needsOnboarding } from '@/lib/onboarding';
+import { applyTheme } from '@/lib/theme';
 import { createClient } from '@/lib/supabase/client';
 import { useCadenceStore } from '@/store/store';
 import { useAppReady, useDisconnectSocket, useUser } from '@/store/selectors';
@@ -95,6 +96,8 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
       store().setCurrentDateTime(now);
       store().setUser(profile);
+      // The account's theme wins over this device's cached one.
+      if (profile.theme) applyTheme(profile.theme);
       store().setCadenceDayEnd(getCadenceDayEnd(now, daySettingsFor(profile, now)));
 
       // 3. Data. Each fetch records its own error; none of them throws.

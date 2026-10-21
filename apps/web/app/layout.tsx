@@ -4,6 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/providers/theme-provider';
 import { Toaster } from '@/providers/toast-provider';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -61,6 +62,10 @@ export default function RootLayout({
         'antialiased',
       )}
     >
+      <head>
+        {/* Sets data-theme from the device cache before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen w-full">
         <ThemeProvider
           attribute="class"

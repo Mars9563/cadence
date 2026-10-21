@@ -2,7 +2,7 @@ import { StateCreator } from 'zustand';
 
 export type ViewMode = 'Dashboard' | 'Notes';
 
-export type SettingsSection = 'profile' | 'day' | 'account' | 'sign-out';
+export type SettingsSection = 'profile' | 'appearance' | 'day' | 'account' | 'sign-out';
 
 export interface uiState {
   ViewMode: ViewMode;
