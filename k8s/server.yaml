@@ -26,7 +26,7 @@ spec:
           hostnames: ['cadence-supabase.mrsdev.in']
       containers:
         - name: cadence-server
-          image: ghcr.io/mars9563/cadence-server:d410d7b8212623f2b208fb607bbae01252d57a39
+          image: ghcr.io/mars9563/cadence-server:a36e7baeca52f19219ce3dd1cfe93aad34d3166a
           ports:
             - containerPort: 4000
           env:
