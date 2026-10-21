@@ -2670,3 +2670,44 @@ grant execute on function public.complete_onboarding(text, time, text) to authen
 revoke update on public.profiles from anon, authenticated;
 
 grant update (display_name, avatar_public_id) on public.profiles to authenticated;
+
+
+-- ============================================================================
+-- CADENCE — MIGRATION 005: account deletion
+-- ============================================================================
+--
+-- Idempotent: safe to run more than once. Run after 004.
+--
+-- A signed-in user can delete their own account. Every table that belongs to
+-- a user references auth.users ON DELETE CASCADE (profiles, items,
+-- habit_completions, daily_notes, folders, notes, and Auth's own sessions,
+-- identities, MFA factors and one-time tokens), so deleting the auth.users
+-- row removes everything in the database in one statement.
+--
+-- Profile photos live in Cloudinary; the API server removes those after this
+-- function succeeds. No service-role key is involved: the function runs as
+-- its owner and only ever touches auth.uid()'s own row.
+-- ============================================================================
+
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'insufficient_privilege';
+  end if;
+
+  delete from auth.users where id = v_user_id;
+end;
+$$;
+
+comment on function public.delete_my_account() is
+  'Permanently delete the signed-in users account and, through ON DELETE CASCADE, all of their data.';
+
+revoke execute on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

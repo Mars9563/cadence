@@ -9,6 +9,7 @@ import habitCompletionsRoute from './routes/habit-completions.route';
 import dailyNotesRoute from './routes/daily-notes.route'
 import foldersRoute from './routes/folders.route';
 import notesRoute from './routes/notes.route';
+import accountRoute from './routes/account.route.js';
 /*
  * Allowed browser origin(s) for REST and Socket.IO. Comma-separated list in
  * CORS_ORIGIN; defaults to the local Next.js dev server.
@@ -59,4 +60,5 @@ app.use(habitCompletionsRoute);
 app.use(dailyNotesRoute);
 app.use(foldersRoute);
 app.use(notesRoute);
+app.use(accountRoute);
 export const httpServer = createServer(app);

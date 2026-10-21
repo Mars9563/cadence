@@ -236,6 +236,29 @@ export async function destroyAvatar(publicId: string | null) {
 }
 
 /**
+ * Delete every uploaded avatar of a user, then their folder. Used when the
+ * account is deleted; throws so the caller can log a failed cleanup.
+ */
+export async function destroyAvatarFolder(userId: string): Promise<void> {
+  const { sdk } = getCloudinary();
+  const folder = avatarFolderFor(userId);
+
+  await sdk.api.delete_resources_by_prefix(`${folder}/`, {
+    type: 'authenticated',
+    resource_type: 'image',
+    invalidate: true,
+  });
+
+  try {
+    await sdk.api.delete_folder(folder);
+  } catch (error) {
+    // A user who never uploaded a photo has no folder.
+    const status = (error as { error?: { http_code?: number } })?.error?.http_code;
+    if (status !== 404) throw error;
+  }
+}
+
+/**
  * A signed, square, face-cropped URL for an avatar in one of the allowed
  * sizes. The signature covers the transformation, so the URL cannot be
  * edited into a different (billable) one.

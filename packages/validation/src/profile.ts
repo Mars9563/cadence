@@ -148,3 +148,8 @@ export type DaySettingsInput = z.infer<typeof daySettingsSchema>;
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 export type SetAvatarInput = z.infer<typeof setAvatarSchema>;
 export type AvatarSize = (typeof AVATAR_SIZES)[number];
+
+/** DELETE /account: the user typed DELETE in the confirmation dialog. */
+export const deleteAccountSchema = z.strictObject({
+  confirm: z.literal('DELETE', { error: 'Type DELETE to confirm.' }),
+});

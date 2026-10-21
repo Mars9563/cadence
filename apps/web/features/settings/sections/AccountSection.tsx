@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useUser } from '@/store/selectors';
 
+import { AccountData } from '../AccountData';
 import { SectionHeader } from '../SettingsModal';
 import Link from 'next/link';
 
@@ -98,6 +99,8 @@ export function AccountSection() {
           Change password
         </Link>
       ) : null}
+
+      <AccountData />
     </div>
   );
 }
