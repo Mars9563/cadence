@@ -29,3 +29,10 @@ const SIGNED_IN_AUTH_PATHS = ['/auth/update-password', '/auth/confirm'];
 export function authPathAllowedWhenSignedIn(pathname: string): boolean {
   return SIGNED_IN_AUTH_PATHS.includes(pathname);
 }
+
+/** Pages anyone may read without signing in (exact paths only). */
+export const PUBLIC_PATHS = ['/', '/privacy', '/terms'];
+
+export function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.includes(pathname);
+}

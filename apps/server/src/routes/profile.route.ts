@@ -20,7 +20,7 @@ const router = Router();
  * (the user id comes from the token, never from the request).
  *
  *   GET    /profile                   profile + avatarSrc
- *   PATCH  /profile                   { displayName }
+ *   PATCH  /profile                   { displayName?, theme? }
  *
  *   PUT    /profile/day-settings      { timeZone, dayEndTime } schedule a change
  *   DELETE /profile/day-settings/pending   cancel the scheduled change

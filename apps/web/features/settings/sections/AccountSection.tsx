@@ -101,6 +101,15 @@ export function AccountSection() {
       ) : null}
 
       <AccountData />
+
+      <p className="text-muted-foreground flex gap-4 text-(length:--cd-text-meta)">
+        <Link href="/privacy" target="_blank" className="hover:text-foreground underline-offset-4 hover:underline">
+          Privacy Policy
+        </Link>
+        <Link href="/terms" target="_blank" className="hover:text-foreground underline-offset-4 hover:underline">
+          Terms of Service
+        </Link>
+      </p>
     </div>
   );
 }

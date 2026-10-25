@@ -156,6 +156,57 @@
   --cd-ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* ==========================================================================
+   Themes: deep, calm palettes that retint the whole workspace (backgrounds,
+   panels, borders, text, fills, accent). Sage is the :root palette above.
+   Keep in sync with THEMES in lib/theme.ts (picker swatches, threads art)
+   and profiles_theme_known (migration 006). Data-series colours stay the
+   same in every theme so the calendar dots keep their meaning.
+   ========================================================================== */
+html[data-theme='red'] {
+  --cd-background: #130f10;
+  --cd-surface-sidebar: #1a1415;
+  --cd-surface-raised: #221a1b;
+  --cd-border-subtle: #3a2c2e;
+  --cd-text-primary: #efe6e5;
+  --cd-text-secondary: #b39f9d;
+  --cd-text-tertiary: #7d6b69;
+  --cd-accent: #e0a3a3;
+  --cd-accent-soft: rgb(224 163 163 / 0.16);
+  --cd-fill-hover: rgb(239 230 229 / 0.05);
+  --cd-fill-selected: rgb(239 230 229 / 0.08);
+  /* Errors must not look like the rose accent: a warmer coral. */
+  --cd-danger: #f0956a;
+}
+
+html[data-theme='blue'] {
+  --cd-background: #0e1014;
+  --cd-surface-sidebar: #13161c;
+  --cd-surface-raised: #1a1e26;
+  --cd-border-subtle: #2b313d;
+  --cd-text-primary: #e6e9ef;
+  --cd-text-secondary: #9ea6b5;
+  --cd-text-tertiary: #6b7383;
+  --cd-accent: #a7bde0;
+  --cd-accent-soft: rgb(167 189 224 / 0.16);
+  --cd-fill-hover: rgb(230 233 239 / 0.05);
+  --cd-fill-selected: rgb(230 233 239 / 0.08);
+}
+
+html[data-theme='purple'] {
+  --cd-background: #110f14;
+  --cd-surface-sidebar: #17141c;
+  --cd-surface-raised: #1f1a26;
+  --cd-border-subtle: #352d3f;
+  --cd-text-primary: #ebe6f0;
+  --cd-text-secondary: #a99fb5;
+  --cd-text-tertiary: #756b82;
+  --cd-accent: #c4b0e2;
+  --cd-accent-soft: rgb(196 176 226 / 0.16);
+  --cd-fill-hover: rgb(235 230 240 / 0.05);
+  --cd-fill-selected: rgb(235 230 240 / 0.08);
+}
+
 html[data-surface='workspace'] {
   color-scheme: dark !important;
   font-family: var(--cd-font-ui);
@@ -225,7 +276,7 @@ html[data-surface='workspace'] [data-slot='tooltip-content'] > div[data-side] {
 /* Avatar cropper (react-easy-crop): accent ring, dimmed outside. */
 .cd-avatar-crop-area {
   border: 2px solid var(--cd-accent) !important;
-  color: rgb(16 17 18 / 0.72) !important;
+  color: color-mix(in srgb, var(--cd-background) 72%, transparent) !important;
 }
 
 /* Settings on phones is a full-screen sheet: keep its close button clear of

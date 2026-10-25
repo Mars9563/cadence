@@ -1,5 +1,7 @@
 import * as z from 'zod';
 
+import { THEME_IDS } from '@cadence/types';
+
 import { timeSchema, timeToSeconds } from './common';
 
 /**
@@ -106,14 +108,18 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
  * PATCH /profile: the fields a user edits directly. Avatars have their own
  * routes (an avatar is only accepted after an upload the server signed),
  * email lives in Supabase Auth, and time zone / day end change only through
- * PUT /profile/day-settings, so none of those are accepted here.
+ * PUT /profile/day-settings, so none of those are accepted here. The theme is
+ * cosmetic and changes directly.
  */
+export const themeSchema = z.enum(THEME_IDS, { error: 'Unknown theme.' });
+
 export const updateProfileDetailsSchema = z
   .strictObject({
     displayName: updateProfileSchema.shape.displayName,
+    theme: themeSchema.optional(),
   })
-  .refine((value) => value.displayName !== undefined, {
-    message: 'Provide displayName.',
+  .refine((value) => value.displayName !== undefined || value.theme !== undefined, {
+    message: 'Provide displayName or theme.',
   });
 
 /** PUT /profile/day-settings: schedule a time zone / day end change. */

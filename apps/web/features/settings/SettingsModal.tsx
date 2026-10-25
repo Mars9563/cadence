@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentType } from 'react';
-import { Clock, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { Clock, LogOut, ShieldCheck, Palette, UserRound } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import {
 } from '@/store/selectors';
 
 import { AccountSection } from './sections/AccountSection';
+import { AppearanceSection } from './sections/AppearanceSection';
 import { TimeAndDaySection } from './sections/TimeAndDaySection';
 import { ProfileSection } from './sections/ProfileSection';
 import { SignOutSection } from './sections/SignOutSection';
@@ -25,6 +26,7 @@ const SECTIONS: {
   Panel: ComponentType;
 }[] = [
   { id: 'profile', label: 'Profile', icon: UserRound, Panel: ProfileSection },
+  { id: 'appearance', label: 'Appearance', icon: Palette, Panel: AppearanceSection },
   { id: 'day', label: 'Time & day', icon: Clock, Panel: TimeAndDaySection },
   { id: 'account', label: 'Account', icon: ShieldCheck, Panel: AccountSection },
   { id: 'sign-out', label: 'Sign out', icon: LogOut, Panel: SignOutSection },

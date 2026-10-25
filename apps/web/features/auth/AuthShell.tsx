@@ -1,10 +1,13 @@
 'use client';
 
 import { useSyncExternalStore, type ReactNode } from 'react';
+import Link from 'next/link';
 import { MdSpaceDashboard } from 'react-icons/md';
 
 import WebThreads from '@/components/WebThreads';
 import { useSurface } from '@/hooks/useSurface';
+import { THEMES } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type AuthShellProps = {
   /** Serif line over the threads (large screens). */
@@ -14,16 +17,6 @@ type AuthShellProps = {
   children: ReactNode;
 };
 
-/*
- * Thread palette: deep sage into the accent, with the primary text colour
- * where threads overlap. Kept in sync with the --cd-* tokens by hand because
- * the WebGL shader takes hex values, not CSS variables.
- */
-const THREADS = {
-  color1: '#6F8468',
-  color2: '#B8C5B0',
-  color3: '#D3DCCB',
-} as const;
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -51,6 +44,8 @@ function useReducedMotion() {
  */
 export function AuthShell({ headline, lede, children }: AuthShellProps) {
   useSurface('workspace');
+  // Threads follow the colour theme (WebGL needs hex values, not CSS variables).
+  const THREADS = THEMES[useTheme()].threads;
 
   const reducedMotion = useReducedMotion();
   const speed = reducedMotion ? 0 : 0.05;
@@ -133,7 +128,18 @@ export function AuthShell({ headline, lede, children }: AuthShellProps) {
         </div>
 
         <div className="flex flex-1 justify-center px-6 pt-4 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-10 lg:items-center lg:py-10">
-          <div className="w-full max-w-[22rem]">{children}</div>
+          <div className="w-full max-w-[22rem]">
+            {children}
+
+            <p className="text-faint-foreground mt-10 flex gap-4 text-(length:--cd-text-meta)">
+              <Link href="/privacy" className="hover:text-foreground">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-foreground">
+                Terms
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
     </main>

@@ -65,6 +65,7 @@ const empty: ExportData = {
     pendingDayEndTime: null,
     pendingEffectiveAt: null,
     onboardedAt: null,
+    theme: 'sage',
     createdAt: '2026-10-01T00:00:00Z',
     updatedAt: '2026-10-01T00:00:00Z',
   },

@@ -1,3 +1,7 @@
+/** Colour themes. Keep in sync with profiles_theme_known (migration 006). */
+export const THEME_IDS = ['sage', 'red', 'blue', 'purple'] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -43,6 +47,9 @@ export type Profile = {
   pendingTimeZone: string | null;
   pendingDayEndTime: string | null;
   pendingEffectiveAt: string | null;
+
+  /** The app's colour theme, saved with the account. */
+  theme: ThemeId;
 
   /** When first-time setup was completed; null shows the setup screen. */
   onboardedAt: string | null;

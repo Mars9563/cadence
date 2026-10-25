@@ -117,6 +117,7 @@ export function buildExportEntries(data: ExportData, exportedAt: Date): Record<s
     displayName: profile.displayName,
     timeZone: profile.timeZone,
     dayEndTime: profile.dayEndTime,
+    theme: profile.theme,
     hasUploadedPhoto: profile.avatarPublicId !== null,
     onboardedAt: profile.onboardedAt,
     createdAt: profile.createdAt,

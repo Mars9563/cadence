@@ -165,7 +165,7 @@ export async function getProfile(req: Request, res: Response) {
   }
 }
 
-/** PATCH /profile  { displayName } */
+/** PATCH /profile  { displayName?, theme? } */
 export async function updateProfile(req: Request, res: Response) {
   const body = updateProfileDetailsSchema.safeParse(req.body);
 

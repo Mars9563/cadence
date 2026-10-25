@@ -1,4 +1,4 @@
-import type { Profile } from '@cadence/types';
+import type { Profile, ThemeId } from '@cadence/types';
 import type {
   DaySettingsInput,
   OnboardingInput,
@@ -19,6 +19,7 @@ type DbProfile = {
   pending_day_end_time: string | null;
   pending_effective_at: string | null;
   onboarded_at: string | null;
+  theme: ThemeId;
   created_at: string;
   updated_at: string;
 };
@@ -35,6 +36,7 @@ const PROFILE_SELECT = `
   pending_day_end_time,
   pending_effective_at,
   onboarded_at,
+  theme,
   created_at,
   updated_at
 `;
@@ -55,6 +57,7 @@ function mapDbProfile(data: DbProfile): Profile {
     pendingDayEndTime: data.pending_day_end_time,
     pendingEffectiveAt: data.pending_effective_at,
     onboardedAt: data.onboarded_at,
+    theme: data.theme,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -114,7 +117,7 @@ async function patchProfile(
   userId: string,
   accessToken: string,
   changes: Partial<
-    Pick<DbProfile, 'display_name' | 'avatar_public_id'>
+    Pick<DbProfile, 'display_name' | 'avatar_public_id' | 'theme'>
   >,
 ): Promise<Profile> {
   const supabase = createSupabaseClient(accessToken);
@@ -134,7 +137,7 @@ async function patchProfile(
   return mapDbProfile(data as DbProfile);
 }
 
-/** Display name. Time zone and day end go through the day-settings RPCs. */
+/** Display name and/or theme. Time zone and day end go through the day-settings RPCs. */
 export function updateProfileDetails(
   userId: string,
   accessToken: string,
@@ -142,6 +145,7 @@ export function updateProfileDetails(
 ): Promise<Profile> {
   return patchProfile(userId, accessToken, {
     ...(input.displayName !== undefined && { display_name: input.displayName }),
+    ...(input.theme !== undefined && { theme: input.theme }),
   });
 }
 

@@ -1,0 +1,70 @@
+/* The one load moment: the headline settles, line by line. */
+.rise {
+  animation: rise 900ms cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 1600ms ease-out both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* A gentle "no" when someone tries to tick yesterday. */
+.refuse {
+  animation: refuse 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes refuse {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+.tick {
+  animation: tick 260ms ease-out both;
+}
+
+@keyframes tick {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .fadeIn,
+  .refuse,
+  .tick {
+    animation: none;
+  }
+}
