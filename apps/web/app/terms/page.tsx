@@ -59,9 +59,14 @@ export default function TermsPage() {
       <section>
         <h2>The service</h2>
         <p>
-          Cadence is provided “as is” and “as available”. It is improved continually, so features
-          may change, and it may occasionally be unavailable. Keep your own copy of anything
-          important: you can export your data at any time.
+          Cadence is a personal learning and portfolio project run by one developer, not a
+          commercial service. It is provided “as is” and “as available”, with no promise of
+          uptime, support or data safety. There are no backups, features may change, and the
+          project may be reset or shut down at any time, with or without notice.
+        </p>
+        <p>
+          Do not rely on Cadence for anything important or store sensitive information in it. Keep
+          your own copy of anything you care about: you can export your data at any time.
         </p>
       </section>
 
@@ -99,7 +104,7 @@ export default function TermsPage() {
         <h2>Changes</h2>
         <p>
           If these terms change, the new version is published here with a new effective date.
-          Significant changes are announced in the app or by email before they apply.
+          Significant changes are announced in the app where practical.
         </p>
       </section>
     </LegalPage>

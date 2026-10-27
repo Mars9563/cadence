@@ -9,7 +9,8 @@ export default function PrivacyPage() {
     <LegalPage title="Privacy Policy">
       <section>
         <p>
-          Cadence is a personal workspace for habits, tasks, notes and a daily journal. This policy
+          Cadence is a personal workspace for habits, tasks, notes and a daily journal, built as a
+          learning and portfolio project. This policy
           explains what data Cadence handles, why, where it is kept and what you can do about it. In
           short: your data is used only to run Cadence for you. There are no ads, no analytics or
           tracking, and your data is never sold or shared for marketing.
@@ -86,6 +87,11 @@ export default function PrivacyPage() {
           Account), your account and everything in it are deleted immediately, including your
           profile photo. Server logs are kept for a short time and rotated.
         </p>
+        <p>
+          There are no backups. Data lost to a fault, a mistake or a reset of the project cannot be
+          recovered, and the project may be shut down at any time. Download your data (Settings →
+          Account) if you want your own copy.
+        </p>
       </section>
 
       <section>
@@ -114,8 +120,10 @@ export default function PrivacyPage() {
         <h2>Security</h2>
         <p>
           Connections are encrypted (HTTPS), passwords are stored only as secure hashes, and each
-          account can only reach its own data. No system is perfectly secure; if a breach affects
-          your data, you and the authorities will be told as the law requires.
+          account can only reach its own data. Cadence is a learning project: it has not been
+          independently audited, and no guarantee is given about the security of your data. No
+          system is perfectly secure; if a breach affects your data, you and the authorities will be
+          told as the law requires.
         </p>
       </section>
 
@@ -128,7 +136,7 @@ export default function PrivacyPage() {
         <h2>Changes</h2>
         <p>
           If this policy changes, the new version is published here with a new effective date.
-          Significant changes are announced in the app or by email before they apply.
+          Significant changes are announced in the app where practical.
         </p>
       </section>
     </LegalPage>
