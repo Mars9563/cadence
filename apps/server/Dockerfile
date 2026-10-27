@@ -12,7 +12,7 @@ RUN pnpm fetch
 #  copy everything
 COPY . .
 #install with filter
-RUN pnpm install --offline --frozen-lockfile --filter @cadence/server
+RUN pnpm install --offline --frozen-lockfile --filter @cadence/server...
 #build
 RUN pnpm --filter @cadence/server build
 # output the out folder i guess
