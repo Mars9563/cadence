@@ -1,6 +1,6 @@
 # build stage
 # build image set
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 # install pnpm and the version to use is 10.33.2
 RUN npm install -g pnpm@10.33.2
 # tell the working directory we are using repo for this(just a folder in the build stage where all things will happen)
@@ -20,7 +20,7 @@ RUN pnpm --filter @cadence/server deploy --prod --legacy /out
 
 # runtime stage
 # runtime image
-FROM node:22-alpine AS runtime
+FROM node:22.23.4-alpine AS runtime
 
 ENV NODE_ENV=production
 
